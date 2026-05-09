@@ -15,6 +15,7 @@ interface User {
   team_name?: string;
   department_name?: string;
   profile_image?: string;
+  created_at?: string;
   bio?: string;
   dob?: string;
   address?: string;
