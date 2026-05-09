@@ -127,7 +127,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Big stat cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-6 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4">
         <LuxuryStatCard {...STAT_CONFIGS[0]} value={stats?.total_teams          || 0} />
         <LuxuryStatCard {...STAT_CONFIGS[1]} value={stats?.total_employees      || 0} />
         <LuxuryStatCard {...STAT_CONFIGS[2]} value={stats?.task_stats?.completed || 0} />
@@ -137,7 +137,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Mini stat cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
         {[
           { label: 'Total Tasks',   val: stats?.task_stats?.total_tasks || 0, color: 'text-primary-600 dark:text-primary-400'  },
           { label: 'In Progress',   val: stats?.task_stats?.in_progress || 0, color: 'text-yellow-600 dark:text-yellow-400'    },
@@ -344,7 +344,7 @@ export default function DashboardPage() {
         <p className="text-gray-500 text-sm mt-1">Welcome back, {user?.name}</p>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-6 gap-4">
         {[
           { label: 'Total',       val: stats?.task_stats?.total_tasks       || 0, color: 'text-primary-600 dark:text-primary-400' },
           { label: 'Pending',     val: stats?.task_stats?.pending_tasks     || 0, color: 'text-yellow-600 dark:text-yellow-400'   },

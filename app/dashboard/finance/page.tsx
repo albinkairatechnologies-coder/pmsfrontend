@@ -1,9 +1,9 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { financeAPI } from '../../utils/api';
+import { financeAPI, reportsAPI } from '../../utils/api';
 import { useAuth } from '../../utils/AuthContext';
-import { FiDollarSign, FiAlertCircle, FiCheckCircle, FiClock, FiPlus, FiChevronDown, FiChevronUp, FiTrash2 } from 'react-icons/fi';
+import { FiDollarSign, FiAlertCircle, FiCheckCircle, FiClock, FiPlus, FiChevronDown, FiChevronUp, FiTrash2, FiDownload, FiFilter, FiX } from 'react-icons/fi';
 
 const METHOD_LABELS: Record<string, string> = {
   cash: 'Cash', bank_transfer: 'Bank Transfer', cheque: 'Cheque',
@@ -35,6 +35,12 @@ export default function FinancePage() {
   const [showModal, setShowModal]   = useState(false);
   const [modalClient, setModalClient] = useState<any>(null);
   const [loading, setLoading] = useState(false);
+
+  // Filters & Export
+  const [filterClient, setFilterClient] = useState('');
+  const [startDate, setStartDate]       = useState('');
+  const [endDate, setEndDate]           = useState('');
+  const [exporting, setExporting]       = useState<'csv' | 'pdf' | null>(null);
 
   const [form, setForm] = useState({
     amount: '', payment_date: '', payment_method: 'bank_transfer', reference: '', notes: '',
@@ -100,6 +106,54 @@ export default function FinancePage() {
     } catch { /* ignore */ }
   };
 
+  const downloadReport = async (format: 'csv' | 'pdf') => {
+    setExporting(format);
+    try {
+      const res = await financeAPI.getAllPayments({
+        client_id: filterClient,
+        start_date: startDate,
+        end_date: endDate
+      });
+      const rows = res.data;
+      if (rows.length === 0) {
+        alert('No payments found for the selected filters.');
+        return;
+      }
+
+      const report_type = 'Finance_Report';
+      
+      if (format === 'csv') {
+        const csvRes = await reportsAPI.exportCSV({ rows, report_type });
+        const url = window.URL.createObjectURL(new Blob([csvRes.data]));
+        const link = document.createElement('a');
+        link.href = url;
+        link.setAttribute('download', `${report_type}_${new Date().toISOString().split('T')[0]}.csv`);
+        document.body.appendChild(link);
+        link.click();
+      } else {
+        const pdfRes = await reportsAPI.generatePDF({
+          rows,
+          report_type: 'Finance Payments Report',
+          start_date: startDate || 'All Time',
+          end_date: endDate || 'All Time',
+          columns: ['company_name', 'payment_date', 'amount', 'payment_method', 'reference', 'added_by_name']
+        });
+        const url = window.URL.createObjectURL(new Blob([pdfRes.data], { type: 'application/pdf' }));
+        const link = document.createElement('a');
+        link.href = url;
+        link.setAttribute('download', `${report_type}_${new Date().toISOString().split('T')[0]}.pdf`);
+        document.body.appendChild(link);
+        link.click();
+      }
+    } catch (err) {
+      console.error('Export failed', err);
+      alert('Failed to generate report');
+    } finally {
+      setExporting(null);
+    }
+  };
+
+
   const STAT_CARDS = [
     { label: 'Total Contract Value', value: fmt(stats.total_contract),   icon: FiDollarSign,   cls: 'text-blue-500' },
     { label: 'Total Collected',      value: fmt(stats.total_collected),  icon: FiCheckCircle,  cls: 'text-emerald-500' },
@@ -110,9 +164,52 @@ export default function FinancePage() {
   return (
     <div className="p-6 space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Finance</h1>
-        <p className="text-gray-500 text-sm mt-0.5">Client payment tracking & revenue overview</p>
+      <div className="flex justify-between items-end gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Finance</h1>
+          <p className="text-gray-500 text-sm mt-0.5">Client payment tracking & revenue overview</p>
+        </div>
+        <div className="flex gap-2">
+          <button 
+            disabled={!!exporting}
+            onClick={() => downloadReport('pdf')}
+            className="btn-secondary gap-2 text-xs py-2">
+            <FiDownload size={14} /> {exporting === 'pdf' ? 'Generating...' : 'Download PDF'}
+          </button>
+          <button 
+            disabled={!!exporting}
+            onClick={() => downloadReport('csv')}
+            className="btn-secondary gap-2 text-xs py-2">
+            <FiDownload size={14} /> {exporting === 'csv' ? 'Exporting...' : 'Export CSV'}
+          </button>
+        </div>
+      </div>
+
+      {/* Filters */}
+      <div className="card p-4 flex gap-4 flex-wrap items-end">
+        <div className="flex-1 min-w-[200px]">
+          <label className="block text-[10px] uppercase font-bold text-gray-400 mb-1.5 ml-1">Filter by Client</label>
+          <select className="input text-sm" value={filterClient} onChange={e => setFilterClient(e.target.value)}>
+            <option value="">All Clients</option>
+            {clients.map(c => <option key={c.id} value={c.id}>{c.company_name}</option>)}
+          </select>
+        </div>
+        <div className="w-44">
+          <label className="block text-[10px] uppercase font-bold text-gray-400 mb-1.5 ml-1">Start Date</label>
+          <input type="date" className="input text-sm" value={startDate} onChange={e => setStartDate(e.target.value)} />
+        </div>
+        <div className="w-44">
+          <label className="block text-[10px] uppercase font-bold text-gray-400 mb-1.5 ml-1">End Date</label>
+          <input type="date" className="input text-sm" value={endDate} onChange={e => setEndDate(e.target.value)} />
+        </div>
+        <div className="flex gap-2 h-10 items-center">
+          {(filterClient || startDate || endDate) && (
+            <button onClick={() => { setFilterClient(''); setStartDate(''); setEndDate(''); }}
+              className="p-2.5 rounded-xl text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-all" title="Clear Filters">
+              <FiX size={18} />
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Stats */}

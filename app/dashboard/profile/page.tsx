@@ -18,6 +18,7 @@ export default function ProfilePage() {
   const [rewards, setRewards]     = useState<any>({ total_coins: 0, history: [] });
   const [imgPreview, setImgPreview] = useState<string>('');
   const [uploadingImg, setUploadingImg] = useState(false);
+  const [imgError, setImgError] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [profileForm, setProfileForm] = useState({
@@ -41,7 +42,8 @@ export default function ProfilePage() {
         emergency_contact_phone: user.emergency_contact_phone || '',
       });
       if (user.profile_image) {
-        setImgPreview(`${API_URL}/auth/profile/image/${user.profile_image}`);
+        setImgPreview(`${API_URL}/auth/profile/image/${user.profile_image}${user.profile_image.includes('?') ? '' : `?v=${Date.now()}`}`);
+        setImgError(false);
       }
       rewardsAPI.getStats().then(r => setRewards(r.data)).catch(() => {});
     }
@@ -59,11 +61,17 @@ export default function ProfilePage() {
     try {
       const fd = new FormData();
       fd.append('image', file);
-      await authAPI.uploadProfileImage(fd);
+      const res = await authAPI.uploadProfileImage(fd);
+      if (res.data.profile_image) {
+        setImgPreview(`${API_URL}/auth/profile/image/${res.data.profile_image}`);
+        setImgError(false);
+      }
       await refreshUser();
-      showSaved('Profile photo updated!');
-    } catch {
-      setError('Failed to upload image');
+      showSaved(res.data.message || 'Profile photo updated!');
+    } catch (err: any) {
+      console.error('Upload error:', err);
+      const msg = err.response?.data?.detail || err.response?.data?.error || 'Failed to upload image';
+      setError(msg);
     } finally {
       setUploadingImg(false);
     }
@@ -137,8 +145,18 @@ export default function ProfilePage() {
             {/* Avatar with upload */}
             <div className="relative mb-4">
               <div className="w-24 h-24 rounded-3xl overflow-hidden bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg">
-                {imgPreview ? (
-                  <img src={imgPreview} alt="profile" className="w-full h-full object-cover" />
+                {imgPreview && !imgError ? (
+                  <img 
+                    src={imgPreview} 
+                    alt="profile" 
+                    className="w-full h-full object-cover" 
+                    crossOrigin="anonymous" 
+                    onLoad={() => console.log('Profile image loaded successfully:', imgPreview)}
+                    onError={(e) => {
+                      console.error('Profile image load failed:', imgPreview, e);
+                      setImgError(true);
+                    }}
+                  />
                 ) : (
                   <span className="text-white text-3xl font-bold">{initials}</span>
                 )}

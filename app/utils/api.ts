@@ -126,6 +126,8 @@ export const taskAPI = {
   sendMessage: (id: number, data: any) => api.post(`/tasks/${id}/messages`, data),
   addParticipant: (id: number, user_id: number) => api.post(`/tasks/${id}/participants`, { user_id }),
   addObserver: (id: number, user_id: number) => api.post(`/tasks/${id}/observers`, { user_id }),
+  removeParticipant: (id: number, userId: number) => api.delete(`/tasks/${id}/participants/${userId}`),
+  removeObserver: (id: number, userId: number) => api.delete(`/tasks/${id}/observers/${userId}`),
 };
 
 export const orgAPI = {
@@ -314,12 +316,16 @@ export const documentAPI = {
 };
 
 export const announcementAPI = {
-  getAll: () => api.get('/announcements'),
-  create: (data: { title: string; content: string }) => api.post('/announcements', data),
-  update: (id: number, data: { title: string; content: string }) => api.put(`/announcements/${id}`, data),
-  delete: (id: number) => api.delete(`/announcements/${id}`),
+  getAll:      () => api.get('/announcements'),
+  create:      (data: any) => api.post('/announcements', data),
+  update:      (id: number, data: any) => api.put(`/announcements/${id}`, data),
+  delete:      (id: number) => api.delete(`/announcements/${id}`),
   getComments: (id: number) => api.get(`/announcements/${id}/comments`),
-  addComment: (id: number, content: string) => api.post(`/announcements/${id}/comments`, { content }),
+  addComment:  (id: number, content: string) => api.post(`/announcements/${id}/comments`, { content }),
+  toggleLike:  (id: number) => api.post(`/announcements/${id}/like`),
+  recordView:  (id: number) => api.post(`/announcements/${id}/view`),
+  togglePin:   (id: number) => api.post(`/announcements/${id}/pin`),
+  votePoll:    (id: number, optionIndex: number) => api.post(`/announcements/${id}/vote`, { option_index: optionIndex }),
 };
 
 export const calendarAPI = {
@@ -342,6 +348,25 @@ export const leadsAPI = {
   delete:       (id: number) => api.delete(`/leads/${id}`),
   addFollowup:  (id: number, data: any) => api.post(`/leads/${id}/followups`, data),
   convert:      (id: number, data: any) => api.post(`/leads/${id}/convert`, data),
+  getActivities:   (id: number) => api.get(`/leads/${id}/activities`),
+  addActivity:     (id: number, data: any) => api.post(`/leads/${id}/activities`, data),
+  deleteActivity:  (actId: number) => api.delete(`/leads/activities/${actId}`),
+  getAnalytics:    () => api.get('/leads/analytics'),
+};
+
+export const clientProfileAPI = {
+  getAll:   (clientId: number) => api.get(`/clients/${clientId}/profiles`),
+  create:   (clientId: number, data: any) => api.post(`/clients/${clientId}/profiles`, data),
+  update:   (profileId: number, data: any) => api.put(`/clients/profiles/${profileId}`, data),
+  delete:   (profileId: number) => api.delete(`/clients/profiles/${profileId}`),
+  getLogs:  (profileId: number) => api.get(`/clients/profiles/${profileId}/logs`),
+};
+
+export const eodAPI = {
+  getMy:    (params?: any) => api.get('/eod/my', { params }),
+  getByDate:(date: string) => api.get('/eod/date', { params: { date } }),
+  edit:     (data: any)   => api.post('/eod/edit', data),
+  getAdmin: (date: string) => api.get('/eod/admin', { params: { date } }),
 };
 
 export const domainAPI = {
@@ -359,6 +384,7 @@ export const financeAPI = {
   addPayment:       (clientId: number, data: any) => api.post(`/finance/clients/${clientId}/payments`, data),
   deletePayment:    (paymentId: number) => api.delete(`/finance/payments/${paymentId}`),
   updateTotal:      (clientId: number, total_amount: number) => api.put(`/finance/clients/${clientId}/total`, { total_amount }),
+  getAllPayments:   (params?: any) => api.get('/finance/payments', { params }),
 };
 
 export const adminChatAPI = {

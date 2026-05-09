@@ -18,12 +18,19 @@
   html { font-family: 'Inter', system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
 
   body {
-    @apply bg-gray-50 text-gray-900 dark:bg-darker dark:text-gray-100;
+    @apply text-gray-900 dark:bg-darker dark:text-gray-100;
+    background-image: url('/white_theme_clouds_bg.png');
+    background-size: cover;
+    background-position: center;
+    background-attachment: fixed;
+    background-repeat: no-repeat;
+    background-color: #f9fafb;
   }
 
   /* Simple dark body */
   .dark body, body.dark {
     background: #0F1117;
+    background-image: none;
   }
 
   /* Custom scrollbar */

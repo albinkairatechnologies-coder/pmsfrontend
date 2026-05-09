@@ -7,7 +7,7 @@ import { useAuth } from '../../../utils/AuthContext';
 import { 
   FiClock, FiUser, FiCalendar, FiActivity, FiUsers, 
   FiEye, FiPlus, FiSend, FiPaperclip, FiMoreHorizontal,
-  FiVideo, FiSearch, FiLayout, FiCheckCircle, FiMic, FiSmile, FiBell, FiList, FiAward
+  FiVideo, FiSearch, FiLayout, FiCheckCircle, FiMic, FiSmile, FiBell, FiList, FiAward, FiX
 } from 'react-icons/fi';
 
 /**
@@ -88,12 +88,11 @@ export default function TaskDetailPage() {
     } catch (err) {}
   };
 
-  const handleAddMember = async (userId: number) => {
-    if (!showMemberSelect) return;
+  const handleRemoveMember = async (userId: number, type: 'participant' | 'observer') => {
+    if (!confirm(`Remove this ${type}?`)) return;
     try {
-      if (showMemberSelect === 'participant') await taskAPI.addParticipant(Number(id), userId);
-      else await taskAPI.addObserver(Number(id), userId);
-      setShowMemberSelect(null);
+      if (type === 'participant') await taskAPI.removeParticipant(Number(id), userId);
+      else await taskAPI.removeObserver(Number(id), userId);
       loadTask();
     } catch (err) {}
   };
@@ -136,7 +135,14 @@ export default function TaskDetailPage() {
              <h2 className="text-[10px] font-black uppercase text-gray-400 mb-4 tracking-widest text-center">Assign {showMemberSelect}</h2>
              <div className="max-h-60 overflow-y-auto pr-2 custom-scrollbar space-y-1">
                 {allUsers.map(u => (
-                  <button key={u.id} onClick={() => handleAddMember(u.id)} className="w-full flex items-center gap-3 p-3 hover:bg-gray-100 dark:hover:bg-white/5 rounded-xl transition-all">
+                  <button key={u.id} onClick={async () => {
+                    try {
+                      if (showMemberSelect === 'participant') await taskAPI.addParticipant(Number(id), u.id);
+                      else await taskAPI.addObserver(Number(id), u.id);
+                      setShowMemberSelect(null);
+                      loadTask();
+                    } catch (err) {}
+                  }} className="w-full flex items-center gap-3 p-3 hover:bg-gray-100 dark:hover:bg-white/5 rounded-xl transition-all">
                     <div className="w-8 h-8 rounded-lg bg-indigo-500/10 text-indigo-500 flex items-center justify-center text-[10px] font-black">{u.name[0]}</div>
                     <div className="text-left font-black text-[12px] text-gray-800 dark:text-gray-100">{u.name}</div>
                   </button>
@@ -187,11 +193,15 @@ export default function TaskDetailPage() {
             ))}
         </div>
 
-        {/* Members Management */}
         <div className="bg-white dark:bg-[#12141D] rounded-[20px] p-5 shadow-sm border border-gray-100 dark:border-white/5 space-y-3">
             <div className="flex justify-between items-center"><h3 className="text-[9px] font-black text-gray-300 uppercase">Participants:</h3> <button onClick={() => setShowMemberSelect('participant')} className="text-indigo-500 text-[9px] font-black hover:underline">+ ADD</button></div>
             <div className="space-y-2">
-                {task.participants?.map((p: any) => (<div key={p.id} className="flex items-center gap-2 font-black text-[11px]"><div className="w-7 h-7 rounded-lg bg-indigo-50 dark:bg-white/5 flex items-center justify-center border border-indigo-100">{p.name[0]}</div>{p.name}</div>))}
+                {task.participants?.map((p: any) => (
+                  <div key={p.id} className="flex items-center justify-between group">
+                    <div className="flex items-center gap-2 font-black text-[11px]"><div className="w-7 h-7 rounded-lg bg-indigo-50 dark:bg-white/5 flex items-center justify-center border border-indigo-100">{p.name[0]}</div>{p.name}</div>
+                    <button onClick={() => handleRemoveMember(p.id, 'participant')} className="p-1.5 text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all"><FiX size={12} /></button>
+                  </div>
+                ))}
                 {(!task.participants || task.participants.length === 0) && <p className="text-[10px] text-gray-300 italic px-1">None yet</p>}
             </div>
         </div>
@@ -200,16 +210,39 @@ export default function TaskDetailPage() {
         <div className="bg-white dark:bg-[#12141D] rounded-[20px] p-5 shadow-sm border border-gray-100 dark:border-white/5 space-y-3">
             <div className="flex justify-between items-center"><h3 className="text-[9px] font-black text-gray-300 uppercase">Observers:</h3> <button onClick={() => setShowMemberSelect('observer')} className="text-purple-500 text-[9px] font-black hover:underline">+ ADD</button></div>
             <div className="space-y-2">
-                {task.observers?.map((o: any) => (<div key={o.id} className="flex items-center gap-2 font-black text-[11px]"><div className="w-7 h-7 rounded-lg bg-purple-50 dark:bg-purple-500/10 flex items-center justify-center border border-purple-100 text-purple-500">{o.name[0]}</div>{o.name}</div>))}
+                {task.observers?.map((o: any) => (
+                  <div key={o.id} className="flex items-center justify-between group">
+                    <div className="flex items-center gap-2 font-black text-[11px]"><div className="w-7 h-7 rounded-lg bg-purple-50 dark:bg-purple-500/10 flex items-center justify-center border border-purple-100 text-purple-500">{o.name[0]}</div>{o.name}</div>
+                    <button onClick={() => handleRemoveMember(o.id, 'observer')} className="p-1.5 text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all"><FiX size={12} /></button>
+                  </div>
+                ))}
                 {(!task.observers || task.observers.length === 0) && <p className="text-[10px] text-gray-300 italic px-1">None yet</p>}
             </div>
         </div>
 
         {/* SHRUNK ACTION TRIAD */}
         <div className="grid grid-cols-3 gap-2">
-            <button onClick={() => updateTaskStatus('in_progress')} className="flex flex-col items-center justify-center p-3 bg-green-500/10 text-green-600 rounded-2xl hover:bg-green-500/20 active:scale-95 transition-all"><FiActivity size={14}/><span className="text-[8px] font-black uppercase mt-1">Start</span></button>
-            <button onClick={() => updateTaskStatus('review')} className="flex flex-col items-center justify-center p-3 bg-orange-500/10 text-orange-600 rounded-2xl hover:bg-orange-500/20 active:scale-95 transition-all"><FiClock size={14}/><span className="text-[8px] font-black uppercase mt-1">Pause</span></button>
-            <button onClick={() => updateTaskStatus('completed')} className="flex flex-col items-center justify-center p-3 bg-blue-600 text-white rounded-2xl shadow-lg shadow-blue-600/20 active:scale-95 transition-all"><FiCheckCircle size={14}/><span className="text-[8px] font-black uppercase mt-1">Done</span></button>
+            <button 
+              disabled={task.status === 'in_progress'}
+              onClick={() => updateTaskStatus('in_progress')} 
+              className={`flex flex-col items-center justify-center p-3 rounded-2xl transition-all active:scale-95 ${task.status === 'in_progress' ? 'bg-blue-500 text-white shadow-lg shadow-blue-500/20' : 'bg-green-500/10 text-green-600 hover:bg-green-500/20'}`}>
+              <FiActivity size={14}/>
+              <span className="text-[8px] font-black uppercase mt-1">{task.status === 'in_progress' ? 'Working' : 'Start'}</span>
+            </button>
+            <button 
+              disabled={task.status === 'review'}
+              onClick={() => updateTaskStatus('review')} 
+              className={`flex flex-col items-center justify-center p-3 rounded-2xl transition-all active:scale-95 ${task.status === 'review' ? 'bg-orange-500 text-white shadow-lg shadow-orange-500/20' : 'bg-orange-500/10 text-orange-600 hover:bg-orange-500/20'}`}>
+              <FiClock size={14}/>
+              <span className="text-[8px] font-black uppercase mt-1">Pause</span>
+            </button>
+            <button 
+              disabled={task.status === 'completed'}
+              onClick={() => updateTaskStatus('completed')} 
+              className={`flex flex-col items-center justify-center p-3 rounded-2xl transition-all active:scale-95 ${task.status === 'completed' ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20' : 'bg-blue-600 text-white hover:bg-blue-700 shadow-lg shadow-blue-600/20'}`}>
+              <FiCheckCircle size={14}/>
+              <span className="text-[8px] font-black uppercase mt-1">{task.status === 'completed' ? 'Done' : 'Complete'}</span>
+            </button>
         </div>
 
         {/* Panel Tab Buttons */}
@@ -251,7 +284,6 @@ export default function TaskDetailPage() {
               {activePanel !== 'chat' && (
                 <button onClick={() => setActivePanel('chat')} className="px-3 py-1.5 text-[9px] font-black text-gray-400 hover:text-indigo-500 border border-gray-200 dark:border-white/10 rounded-lg transition-all">← Back to Chat</button>
               )}
-              <button className="flex items-center gap-2 px-5 py-2.5 bg-[#8E44AD] text-white text-[9px] font-black rounded-xl shadow-xl shadow-purple-500/15 active:scale-95 transition-all"><FiVideo size={12}/> VIDEO CALL</button>
             </div>
          </div>
 

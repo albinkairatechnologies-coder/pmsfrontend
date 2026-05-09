@@ -6,6 +6,8 @@ import { messageAPI } from '../../utils/api';
 import { FiSend, FiSearch, FiMoreVertical, FiPaperclip, FiSmile, FiCheck, FiArrowLeft, FiUser, FiMessageSquare, FiShield, FiClock, FiDownload, FiFile, FiImage, FiX, FiEdit2, FiPlus, FiUsers } from 'react-icons/fi';
 import GlowCard from '../../components/GlowCard';
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+
 const COMMON_EMOJIS = ['😊', '😂', '👍', '🔥', '❤️', '🙌', '🎉', '💻', '🚀', '✅', '✨', '🤔', '👋', '🙏', '💯', '🌟', '🤯', '😎', '💡', '📢'];
 
 const formatTime = (iso: string | null) => {
@@ -38,6 +40,7 @@ export default function ChatPage() {
   const [showCreateGroup, setShowCreateGroup] = useState(false);
   const [newGroupName, setNewGroupName] = useState('');
   const [selectedMembers, setSelectedMembers] = useState<number[]>([]);
+  const [filter, setFilter] = useState<'all' | 'chat' | 'group'>('all');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -112,7 +115,8 @@ export default function ChatPage() {
           timestamp: new Date().toISOString(),
           is_read: 0,
           is_edited: 0,
-          sender_name: user?.name
+          sender_name: user?.name,
+          sender_image: user?.profile_image
         }]);
       }
       setNewMessage('');
@@ -182,7 +186,8 @@ export default function ChatPage() {
         timestamp: new Date().toISOString(),
         is_read: 0,
         is_edited: 0,
-        sender_name: user?.name
+        sender_name: user?.name,
+        sender_image: user?.profile_image
       }]);
       fetchContacts();
     } catch (err) {
@@ -217,10 +222,14 @@ export default function ChatPage() {
     setNewMessage(prev => prev + emoji);
   };
 
-  const filteredContacts = contacts.filter(c => 
-    c.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-    (c.email && c.email.toLowerCase().includes(searchQuery.toLowerCase()))
-  );
+  const filteredContacts = contacts.filter(c => {
+    const matchesSearch = c.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                         (c.email && c.email.toLowerCase().includes(searchQuery.toLowerCase()));
+    if (!matchesSearch) return false;
+    if (filter === 'group') return c.is_group;
+    if (filter === 'chat') return !c.is_group;
+    return true;
+  });
 
   const getInitials = (name: string) => {
     return name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
@@ -250,7 +259,7 @@ export default function ChatPage() {
                 <FiPlus size={18} />
               </button>
             </div>
-            <div className="relative">
+            <div className="relative mb-3">
               <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
               <input
                 type="text"
@@ -259,6 +268,23 @@ export default function ChatPage() {
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full pl-10 pr-4 py-2.5 bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl text-sm focus:ring-4 focus:ring-primary-500/10 dark:focus:ring-gold-500/10 outline-none transition-all dark:text-white"
               />
+            </div>
+            <div className="flex gap-2">
+              <button 
+                onClick={() => setFilter('all')} 
+                className={`flex-1 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${filter === 'all' ? 'bg-primary-500 dark:bg-gold-500 text-white dark:text-darker shadow-lg shadow-primary-500/20' : 'bg-gray-100 dark:bg-white/5 text-gray-400 hover:text-gray-600'}`}>
+                All
+              </button>
+              <button 
+                onClick={() => setFilter('chat')} 
+                className={`flex-1 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${filter === 'chat' ? 'bg-primary-500 dark:bg-gold-500 text-white dark:text-darker shadow-lg shadow-primary-500/20' : 'bg-gray-100 dark:bg-white/5 text-gray-400 hover:text-gray-600'}`}>
+                Chat
+              </button>
+              <button 
+                onClick={() => setFilter('group')} 
+                className={`flex-1 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${filter === 'group' ? 'bg-primary-500 dark:bg-gold-500 text-white dark:text-darker shadow-lg shadow-primary-500/20' : 'bg-gray-100 dark:bg-white/5 text-gray-400 hover:text-gray-600'}`}>
+                Group
+              </button>
             </div>
           </div>
           
@@ -279,8 +305,19 @@ export default function ChatPage() {
                   }`}
                 >
                   <div className="relative">
-                    <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-bold text-white shadow-lg ${contact.is_group ? 'bg-gradient-to-br from-indigo-500 to-purple-600' : 'bg-gradient-to-br from-primary-500 to-secondary-500'}`}>
-                      {contact.is_group ? <FiUsers size={20} /> : getInitials(contact.name)}
+                    <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-bold text-white shadow-lg overflow-hidden ${contact.is_group ? 'bg-gradient-to-br from-indigo-500 to-purple-600' : 'bg-gradient-to-br from-primary-500 to-secondary-500'}`}>
+                      {contact.is_group ? (
+                        <FiUsers size={20} />
+                      ) : contact.profile_image ? (
+                        <img 
+                          src={`${API_URL}/auth/profile/image/${contact.profile_image}`} 
+                          alt={contact.name} 
+                          className="w-full h-full object-cover" 
+                          crossOrigin="anonymous" 
+                        />
+                      ) : (
+                        getInitials(contact.name)
+                      )}
                     </div>
                     {contact.unread_count > 0 && (
                       <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-[10px] flex items-center justify-center rounded-full border-2 border-white dark:border-dark-card font-bold animate-bounce">
@@ -322,45 +359,56 @@ export default function ChatPage() {
         {selectedContact ? (
           <>
             {/* Chat Header */}
-            <div className="p-4 border-b border-gray-100 dark:border-white/5 flex items-center justify-between bg-white/50 dark:bg-black/40 backdrop-blur-md sticky top-0 z-10">
-              <div className="flex items-center gap-3">
+            <div className="p-3 md:p-4 border-b border-gray-100 dark:border-white/5 flex items-center justify-between bg-white/50 dark:bg-black/40 backdrop-blur-md sticky top-0 z-10">
+              <div className="flex items-center gap-2 md:gap-3">
                 <button
                   onClick={() => setSelectedContact(null)}
                   className="md:hidden p-2 -ml-2 text-gray-500 hover:text-primary-500 transition-colors"
                 >
                   <FiArrowLeft size={20} />
                 </button>
-                <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold text-white shadow-md ${selectedContact.is_group ? 'bg-gradient-to-tr from-indigo-600 to-purple-600' : 'bg-gradient-to-tr from-primary-600 to-secondary-600'}`}>
-                  {selectedContact.is_group ? <FiUsers size={18} /> : getInitials(selectedContact.name)}
+                <div className={`w-8 h-8 md:w-10 md:h-10 rounded-xl flex items-center justify-center font-bold text-white shadow-md overflow-hidden ${selectedContact.is_group ? 'bg-gradient-to-tr from-indigo-600 to-purple-600' : 'bg-gradient-to-tr from-primary-600 to-secondary-600'}`}>
+                  {selectedContact.is_group ? (
+                    <FiUsers size={16} />
+                  ) : selectedContact.profile_image ? (
+                    <img 
+                      src={`${API_URL}/auth/profile/image/${selectedContact.profile_image}`} 
+                      alt={selectedContact.name} 
+                      className="w-full h-full object-cover" 
+                      crossOrigin="anonymous" 
+                    />
+                  ) : (
+                    getInitials(selectedContact.name)
+                  )}
                 </div>
-                <div>
-                  <h3 className="font-bold text-gray-900 dark:text-white leading-tight">
+                <div className="min-w-0">
+                  <h3 className="font-bold text-gray-900 dark:text-white leading-tight truncate text-sm md:text-base">
                     {selectedContact.name}
                   </h3>
-                  <p className="text-[10px] text-gray-500 dark:text-gold-500 flex items-center gap-1 uppercase tracking-widest font-semibold">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                    {selectedContact.is_group ? 'Active Group' : `Online • ${selectedContact.role?.replace('_', ' ')}`}
+                  <p className="text-[8px] md:text-[10px] text-gray-500 dark:text-gold-500 flex items-center gap-1 uppercase tracking-widest font-semibold">
+                    <span className="w-1 h-1 md:w-1.5 md:h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                    {selectedContact.is_group ? 'Active Group' : `Online`}
                   </p>
                 </div>
               </div>
-              <div className="flex gap-1">
+              <div className="flex gap-0.5 md:gap-1">
                 <button className="p-2 text-gray-400 hover:text-primary-500 transition-colors rounded-lg hover:bg-primary-500/5">
-                  <FiSearch size={18} />
+                  <FiSearch size={16} />
                 </button>
                 <button className="p-2 text-gray-400 hover:text-primary-500 transition-colors rounded-lg hover:bg-primary-500/5">
-                  <FiMoreVertical size={18} />
+                  <FiMoreVertical size={16} />
                 </button>
               </div>
             </div>
 
             {/* Chat Messages */}
-            <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-4 custom-scrollbar bg-slate-50/30 dark:bg-black/10">
+            <div className="flex-1 overflow-y-auto p-3 md:p-6 space-y-4 custom-scrollbar bg-slate-50/30 dark:bg-black/10">
               {messages.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-full opacity-50 py-10 scale-90">
-                   <div className="w-20 h-20 bg-gray-200 dark:bg-white/5 rounded-full flex items-center justify-center mb-4">
-                      <FiMessageSquare size={32} className="text-gray-400" />
+                   <div className="w-16 h-16 md:w-20 md:h-20 bg-gray-200 dark:bg-white/5 rounded-full flex items-center justify-center mb-4">
+                      <FiMessageSquare size={28} className="text-gray-400" />
                    </div>
-                   <p className="text-sm dark:text-white font-bold uppercase tracking-widest">No messages yet. Say hello!</p>
+                   <p className="text-[10px] md:text-sm dark:text-white font-bold uppercase tracking-widest">No messages yet. Say hello!</p>
                 </div>
               ) : (
                 messages.map((msg, i) => {
@@ -373,76 +421,92 @@ export default function ChatPage() {
                     <div key={msg.id} className="space-y-4">
                        {showDate && (
                          <div className="flex justify-center my-6">
-                            <span className="px-3 py-1 bg-gray-200/50 dark:bg-white/5 text-[10px] text-gray-500 dark:text-gray-400 rounded-full font-medium uppercase tracking-tighter">
+                            <span className="px-3 py-1 bg-gray-200/50 dark:bg-white/5 text-[9px] md:text-[10px] text-gray-500 dark:text-gray-400 rounded-full font-medium uppercase tracking-tighter">
                                {formatDateLong(msg.timestamp)}
                             </span>
                          </div>
                        )}
                        <div className={`flex ${isOwn ? 'justify-end' : 'justify-start'} group transition-all duration-300`}>
-                        <div className={`max-w-[85%] md:max-w-[70%] space-y-1 ${isOwn ? 'items-end' : 'items-start'}`}>
-                          {showSenderName && (
-                             <span className="text-[10px] font-black text-primary-500 dark:text-gold-500 uppercase tracking-widest ml-1">{msg.sender_name}</span>
+                        <div className={`flex items-end gap-2 max-w-[90%] md:max-w-[75%]`}>
+                          {!isOwn && selectedContact.is_group && (
+                            <div className="w-7 h-7 md:w-8 md:h-8 rounded-lg overflow-hidden flex-shrink-0 bg-gray-200 dark:bg-white/5 flex items-center justify-center text-[9px] font-bold">
+                              {msg.sender_image ? (
+                                <img 
+                                  src={`${API_URL}/auth/profile/image/${msg.sender_image}`} 
+                                  alt={msg.sender_name} 
+                                  className="w-full h-full object-cover" 
+                                  crossOrigin="anonymous" 
+                                />
+                              ) : (
+                                getInitials(msg.sender_name || 'U')
+                              )}
+                            </div>
                           )}
-                          <div className={`relative px-4 py-3 rounded-2xl text-sm shadow-sm transition-all duration-300 ${
-                            isOwn 
-                              ? 'bg-primary-600 dark:bg-gold-500 text-white dark:text-darker rounded-tr-none' 
-                              : 'bg-white dark:bg-white/10 dark:text-white rounded-tl-none border border-gray-100 dark:border-white/5'
-                          } ${editingMessage?.id === msg.id ? 'ring-4 ring-primary-500/20 dark:ring-gold-500/20' : ''}`}>
-                            
-                            {isOwn && !msg.file_url && (
-                              <button 
-                                onClick={() => startEditing(msg)}
-                                className={`absolute ${isOwn ? '-left-10' : '-right-10'} top-1/2 -translate-y-1/2 p-2 text-gray-400 hover:text-primary-500 dark:hover:text-gold-500 opacity-0 group-hover:opacity-100 transition-all active:scale-95`}
-                                title="Edit message"
-                              >
-                                <FiEdit2 size={16} />
-                              </button>
+                          <div className={`space-y-1 ${isOwn ? 'items-end' : 'items-start'}`}>
+                            {showSenderName && (
+                               <span className="text-[9px] md:text-[10px] font-black text-primary-500 dark:text-gold-500 uppercase tracking-widest ml-1">{msg.sender_name}</span>
                             )}
+                            <div className={`relative px-3 md:px-4 py-2 md:py-3 rounded-xl md:rounded-2xl text-[13px] md:text-sm shadow-sm transition-all duration-300 ${
+                              isOwn 
+                                ? 'bg-primary-600 dark:bg-gold-500 text-white dark:text-darker rounded-tr-none' 
+                                : 'bg-white dark:bg-white/10 dark:text-white rounded-tl-none border border-gray-100 dark:border-white/5'
+                            } ${editingMessage?.id === msg.id ? 'ring-4 ring-primary-500/20 dark:ring-gold-500/20' : ''}`}>
+                              
+                              {isOwn && !msg.file_url && (
+                                <button 
+                                  onClick={() => startEditing(msg)}
+                                  className={`absolute ${isOwn ? '-left-10' : '-right-10'} top-1/2 -translate-y-1/2 p-2 text-gray-400 hover:text-primary-500 dark:hover:text-gold-500 opacity-0 group-hover:opacity-100 transition-all active:scale-95`}
+                                  title="Edit message"
+                                >
+                                  <FiEdit2 size={16} />
+                                </button>
+                              )}
 
-                            {msg.file_url ? (
-                              <div className="flex flex-col gap-2">
-                                {msg.file_type?.startsWith('image/') ? (
-                                  <div className="relative group cursor-pointer overflow-hidden rounded-xl bg-black/5" onClick={() => handleDownload(msg.file_url, msg.file_name)}>
-                                     <div className="p-6 flex flex-col items-center gap-2 border border-dashed border-gray-100 dark:border-white/20 rounded-xl">
-                                        <FiImage size={32} />
-                                        <span className="text-[10px] font-bold truncate w-full text-center">{msg.file_name}</span>
-                                     </div>
-                                  </div>
-                                ) : (
-                                  <div className="flex items-center gap-3 p-3 bg-black/10 dark:bg-white/5 rounded-xl border border-white/10">
-                                    <div className="w-10 h-10 rounded-lg bg-white/10 flex items-center justify-center">
-                                      <FiFile size={20} />
+                              {msg.file_url ? (
+                                <div className="flex flex-col gap-2">
+                                  {msg.file_type?.startsWith('image/') ? (
+                                    <div className="relative group cursor-pointer overflow-hidden rounded-xl bg-black/5" onClick={() => handleDownload(msg.file_url, msg.file_name)}>
+                                       <div className="p-6 flex flex-col items-center gap-2 border border-dashed border-gray-100 dark:border-white/20 rounded-xl">
+                                          <FiImage size={32} />
+                                          <span className="text-[10px] font-bold truncate w-full text-center">{msg.file_name}</span>
+                                       </div>
                                     </div>
-                                    <div className="flex-1 min-w-0">
-                                      <p className="text-xs font-bold truncate">{msg.file_name}</p>
-                                      <p className="text-[10px] opacity-60 uppercase">{msg.file_type?.split('/')[1]}</p>
+                                  ) : (
+                                    <div className="flex items-center gap-3 p-3 bg-black/10 dark:bg-white/5 rounded-xl border border-white/10">
+                                      <div className="w-10 h-10 rounded-lg bg-white/10 flex items-center justify-center">
+                                        <FiFile size={20} />
+                                      </div>
+                                      <div className="flex-1 min-w-0">
+                                        <p className="text-xs font-bold truncate">{msg.file_name}</p>
+                                        <p className="text-[10px] opacity-60 uppercase">{msg.file_type?.split('/')[1]}</p>
+                                      </div>
+                                      <button 
+                                        onClick={() => handleDownload(msg.file_url, msg.file_name)}
+                                        className="p-2 hover:bg-white/10 rounded-lg transition-colors cursor-pointer"
+                                        title="Download"
+                                      >
+                                        <FiDownload size={16} />
+                                      </button>
                                     </div>
-                                    <button 
-                                      onClick={() => handleDownload(msg.file_url, msg.file_name)}
-                                      className="p-2 hover:bg-white/10 rounded-lg transition-colors cursor-pointer"
-                                      title="Download"
-                                    >
-                                      <FiDownload size={16} />
-                                    </button>
+                                  )}
+                                  {msg.content && msg.content !== `Attached file: ${msg.file_name}` && <p className="mt-1">{msg.content}</p>}
+                                </div>
+                              ) : (
+                                <p className="whitespace-pre-wrap">{msg.content}</p>
+                              )}
+                              
+                              <div className={`flex items-center gap-1.5 mt-1.5 ${isOwn ? 'justify-end text-white/70 dark:text-darker/70' : 'justify-start text-gray-400'}`}>
+                                {msg.is_edited === 1 && <span className="text-[9px] font-black italic uppercase tracking-tighter opacity-70">Edited</span>}
+                                <span className="text-[9px] font-medium uppercase">
+                                  {formatTime(msg.timestamp)}
+                                </span>
+                                {isOwn && !selectedContact.is_group && (
+                                  <div className="flex -space-x-1">
+                                    <FiCheck size={10} className={msg.is_read ? (isOwn && user?.role !== 'admin' ? "text-blue-100" : "text-emerald-400") : ""} />
+                                    {msg.is_read ? <FiCheck size={10} className={isOwn && user?.role !== 'admin' ? "text-blue-100" : "text-emerald-400"} /> : null}
                                   </div>
                                 )}
-                                {msg.content && msg.content !== `Attached file: ${msg.file_name}` && <p className="mt-1">{msg.content}</p>}
                               </div>
-                            ) : (
-                              <p className="whitespace-pre-wrap">{msg.content}</p>
-                            )}
-                            
-                            <div className={`flex items-center gap-1.5 mt-1.5 ${isOwn ? 'justify-end text-white/70 dark:text-darker/70' : 'justify-start text-gray-400'}`}>
-                              {msg.is_edited === 1 && <span className="text-[9px] font-black italic uppercase tracking-tighter opacity-70">Edited</span>}
-                              <span className="text-[9px] font-medium uppercase">
-                                {formatTime(msg.timestamp)}
-                              </span>
-                              {isOwn && !selectedContact.is_group && (
-                                <div className="flex -space-x-1">
-                                  <FiCheck size={10} className={msg.is_read ? (isOwn && user?.role !== 'admin' ? "text-blue-100" : "text-emerald-400") : ""} />
-                                  {msg.is_read ? <FiCheck size={10} className={isOwn && user?.role !== 'admin' ? "text-blue-100" : "text-emerald-400"} /> : null}
-                                </div>
-                              )}
                             </div>
                           </div>
                         </div>
@@ -565,8 +629,17 @@ export default function ChatPage() {
                             onClick={() => toggleMember(u.id)}
                             className={`flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all ${selectedMembers.includes(u.id) ? 'bg-primary-500/10 dark:bg-gold-500/10 border border-primary-500/20 dark:border-gold-500/20' : 'hover:bg-gray-50 dark:hover:bg-white/5'}`}
                           >
-                             <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-[10px] font-bold text-white bg-gradient-to-br from-primary-400 to-secondary-400`}>
-                                {getInitials(u.name)}
+                             <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-[10px] font-bold text-white overflow-hidden bg-gradient-to-br from-primary-400 to-secondary-400`}>
+                                {u.profile_image ? (
+                                  <img 
+                                    src={`${API_URL}/auth/profile/image/${u.profile_image}`} 
+                                    alt={u.name} 
+                                    className="w-full h-full object-cover" 
+                                    crossOrigin="anonymous" 
+                                  />
+                                ) : (
+                                  getInitials(u.name)
+                                )}
                              </div>
                              <div className="flex-1 min-w-0">
                                 <p className="text-sm font-bold truncate dark:text-white">{u.name}</p>

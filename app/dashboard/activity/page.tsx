@@ -5,6 +5,8 @@ import { activityAPI, authAPI } from '../../utils/api';
 import { useAuth } from '../../utils/AuthContext';
 import { FiRefreshCw, FiActivity, FiUsers, FiClock, FiZap } from 'react-icons/fi';
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+
 const STATUS_CONFIG: Record<string, { label: string; dot: string; badge: string }> = {
   active:  { label: 'Active',   dot: 'bg-green-400 animate-pulse',  badge: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' },
   online:  { label: 'Online',   dot: 'bg-blue-400',                  badge: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' },
@@ -92,46 +94,51 @@ export default function ActivityPage() {
     : 0;
 
   return (
-    <div>
+    <div className="pb-20 pt-4 px-2 md:px-4">
       {/* Header */}
-      <div className="flex items-center justify-between mb-8">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white tracking-tight flex items-center gap-2">
-            <FiActivity className="text-primary-500" /> Live Monitor
-          </h1>
-          <p className="text-sm text-gray-500 mt-0.5">
-            Last updated: {lastRefresh.toLocaleTimeString()}
-          </p>
+      <div className="flex flex-col lg:flex-row justify-between items-stretch lg:items-center gap-4 bg-white dark:bg-surface-dark p-4 md:p-6 rounded-[2rem] md:rounded-3xl border border-gray-100 dark:border-white/5 shadow-xl shadow-black/5 mb-8">
+        <div className="flex items-center gap-3 md:gap-4">
+          <div className="w-10 h-10 md:w-12 md:h-12 bg-primary-500/10 dark:bg-gold-500/10 border border-primary-500/20 dark:border-gold-500/20 rounded-xl md:rounded-2xl flex items-center justify-center text-primary-500 dark:text-gold-500 shadow-inner">
+             <FiActivity size={20} />
+          </div>
+          <div>
+            <h1 className="text-xl md:text-2xl font-black text-gray-900 dark:text-white tracking-tight flex items-center gap-2 uppercase">
+              Live Monitor
+            </h1>
+            <p className="text-[9px] md:text-[10px] font-black uppercase tracking-widest text-gray-400 mt-0.5 opacity-70">
+              Real-time Status • {lastRefresh.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+            </p>
+          </div>
         </div>
-        <div className="flex items-center gap-3">
-          <label className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 cursor-pointer">
+        <div className="flex flex-row items-center justify-between lg:justify-end gap-3">
+          <label className="flex items-center gap-2 text-[10px] md:text-xs font-bold text-gray-600 dark:text-gray-400 cursor-pointer uppercase tracking-tighter">
             <input type="checkbox" checked={autoRefresh}
               onChange={e => setAutoRefresh(e.target.checked)}
               className="rounded" />
-            Auto-refresh (30s)
+            Auto-refresh
           </label>
-          <button onClick={load} className="btn-secondary gap-2 text-sm">
-            <FiRefreshCw size={14} /> Refresh
+          <button onClick={load} className="flex items-center gap-2 px-4 py-2.5 bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl text-[10px] md:text-xs font-black uppercase tracking-widest hover:bg-gray-100 dark:hover:bg-white/10 transition-all active:scale-95 shadow-sm">
+            <FiRefreshCw size={14} className={autoRefresh ? 'animate-spin-slow' : ''} /> Refresh
           </button>
         </div>
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-        <StatCard icon={<FiZap />}      label="Active Now"   value={activeCount}          color="bg-green-500"  sub="Working" />
-        <StatCard icon={<FiClock />}    label="Idle / Away"  value={idleCount}            color="bg-yellow-500" sub="No activity" />
-        <StatCard icon={<FiUsers />}    label="Offline"      value={offlineCount}         color="bg-gray-500"   sub="Not logged in" />
-        <StatCard icon={<FiActivity />} label="Avg Score"    value={`${avgScore.toFixed(0)}%`} color="bg-blue-500" sub="Productivity" />
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-8">
+        <StatCard icon={<FiZap />}      label="Active"   value={activeCount}          color="bg-green-500"  sub="Working" />
+        <StatCard icon={<FiClock />}    label="Idle"     value={idleCount}            color="bg-yellow-500" sub="No activity" />
+        <StatCard icon={<FiUsers />}    label="Offline"      value={offlineCount}         color="bg-gray-500"   sub="Not logged" />
+        <StatCard icon={<FiActivity />} label="Score"    value={`${avgScore.toFixed(0)}%`} color="bg-blue-500" sub="Productivity" />
       </div>
 
       {/* Filter tabs */}
-      <div className="flex gap-1 p-1 bg-gray-100 dark:bg-gray-800 rounded-xl w-fit mb-6">
+      <div className="flex gap-1 md:gap-2 p-1 md:p-1.5 bg-gray-100 dark:bg-white/5 rounded-2xl w-full md:w-fit mb-8 border border-gray-200/50 dark:border-white/5 shadow-inner overflow-x-auto no-scrollbar">
         {(['all', 'active', 'idle', 'offline'] as const).map(f => (
           <button key={f} onClick={() => setFilter(f)}
-            className={`px-4 py-2 rounded-lg text-sm font-medium capitalize transition-all duration-150 ${
+            className={`flex-1 md:flex-none px-4 md:px-5 py-2.5 rounded-xl text-[9px] md:text-[10px] font-black uppercase tracking-widest transition-all duration-300 whitespace-nowrap ${
               filter === f
-                ? 'bg-white dark:bg-gray-700 text-primary-600 dark:text-primary-400 shadow-sm'
-                : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
+                ? 'bg-white dark:bg-gold-500 text-primary-600 dark:text-darker shadow-xl shadow-black/5'
+                : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'
             }`}>
             {f === 'all' ? `All (${employees.length})` :
              f === 'active' ? `Active (${activeCount})` :
@@ -142,82 +149,103 @@ export default function ActivityPage() {
       </div>
 
       {/* Employee grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
         {filtered.length === 0 && (
-          <div className="col-span-3 card text-center py-12 text-gray-400">
-            No employees found
+          <div className="col-span-3 bg-white dark:bg-surface-dark border border-dashed border-gray-200 dark:border-white/10 rounded-3xl py-24 text-center">
+             <FiActivity className="mx-auto text-gray-200 dark:text-gray-700 mb-4" size={48} />
+             <p className="text-xs font-black uppercase tracking-[0.2em] text-gray-400">No employees found</p>
           </div>
         )}
         {filtered.map((emp: any) => {
           const cfg = STATUS_CONFIG[emp.status] || STATUS_CONFIG.offline;
           const totalSec = (emp.today_active_seconds || 0) + (emp.today_idle_seconds || 0);
           return (
-            <div key={emp.id} className="card hover:shadow-card-hover transition-all duration-200">
+            <div key={emp.id} className="bg-white dark:bg-surface-dark rounded-[2rem] p-6 border border-gray-100 dark:border-white/5 shadow-xl shadow-black/[0.02] hover:shadow-2xl hover:shadow-primary-500/5 transition-all duration-300 group">
               {/* Top row */}
-              <div className="flex items-start justify-between mb-4">
-                <div className="flex items-center gap-3">
+              <div className="flex items-start justify-between mb-6">
+                <div className="flex items-center gap-4">
                   <div className="relative">
-                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary-500 to-secondary-500
-                                    flex items-center justify-center text-white font-bold text-sm">
-                      {emp.name?.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase()}
+                    <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-gray-100 to-gray-50 dark:from-white/10 dark:to-white/5 
+                                    flex items-center justify-center text-gray-700 dark:text-white font-black text-lg border border-gray-200 dark:border-white/10 shadow-sm overflow-hidden">
+                      {emp.profile_image ? (
+                        <img 
+                          src={`${API_URL}/auth/profile/image/${emp.profile_image}`} 
+                          alt={emp.name} 
+                          className="w-full h-full object-cover" 
+                          crossOrigin="anonymous" 
+                        />
+                      ) : (
+                        emp.name?.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase()
+                      )}
                     </div>
-                    <span className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2
-                                      border-white dark:border-gray-800 ${cfg.dot}`} />
+                    <span className={`absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-4
+                                      border-white dark:border-surface-dark shadow-sm ${cfg.dot}`} />
                   </div>
                   <div>
-                    <p className="font-semibold text-gray-800 dark:text-white text-sm">{emp.name}</p>
-                    <p className="text-xs text-gray-400 capitalize">{emp.role?.replace(/_/g, ' ')}</p>
+                    <p className="font-black text-gray-900 dark:text-white text-sm tracking-tight leading-none mb-1">{emp.name}</p>
+                    <p className="text-[10px] font-bold text-primary-500 dark:text-gold-500 uppercase tracking-widest opacity-80">{emp.role?.replace(/_/g, ' ')}</p>
                   </div>
                 </div>
-                <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${cfg.badge}`}>
+                <span className={`text-[9px] font-black uppercase tracking-widest px-3 py-1 rounded-full border shadow-sm ${cfg.badge.includes('green') ? 'border-green-200/50' : cfg.badge.includes('yellow') ? 'border-yellow-200/50' : 'border-gray-200/50'} ${cfg.badge}`}>
                   {cfg.label}
                 </span>
               </div>
 
               {/* Team / dept */}
               {(emp.team_name || emp.department_name) && (
-                <p className="text-xs text-gray-400 mb-3">
-                  {emp.team_name}{emp.team_name && emp.department_name ? ' · ' : ''}{emp.department_name}
-                </p>
+                <div className="mb-4 flex items-center gap-2 px-3 py-1.5 bg-slate-50 dark:bg-white/3 rounded-xl border border-gray-100 dark:border-white/5 w-fit">
+                   <FiUsers size={12} className="text-gray-400" />
+                   <p className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-tighter">
+                    {emp.team_name}{emp.team_name && emp.department_name ? ' • ' : ''}{emp.department_name}
+                   </p>
+                </div>
               )}
 
               {/* Productivity score */}
-              <div className="mb-3">
-                <div className="flex justify-between text-xs text-gray-500 mb-1">
-                  <span>Productivity</span>
-                  <span>{fmtSeconds(emp.today_active_seconds || 0)} active</span>
+              <div className="mb-4 p-4 bg-slate-50/50 dark:bg-white/3 rounded-2xl border border-gray-100 dark:border-white/5">
+                <div className="flex justify-between text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2">
+                  <span>Productivity Index</span>
+                  <span className="text-primary-500">{fmtSeconds(emp.today_active_seconds || 0)} active</span>
                 </div>
                 <ScoreBar score={emp.productivity_score || 0} />
               </div>
 
               {/* Active vs Idle bar */}
               {totalSec > 0 && (
-                <div className="mb-3">
-                  <div className="flex justify-between text-xs text-gray-500 mb-1">
-                    <span className="text-green-600">Active: {fmtSeconds(emp.today_active_seconds || 0)}</span>
-                    <span className="text-yellow-600">Idle: {fmtSeconds(emp.today_idle_seconds || 0)}</span>
+                <div className="mb-6">
+                  <div className="flex justify-between text-[10px] font-black uppercase tracking-tighter mb-2">
+                    <span className="text-green-600 dark:text-green-400">Activity Ratio</span>
+                    <span className="text-gray-400">{Math.round((emp.today_active_seconds / totalSec) * 100)}% active</span>
                   </div>
-                  <div className="h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden flex">
-                    <div className="bg-green-500 h-full transition-all duration-500"
+                  <div className="h-1.5 bg-gray-100 dark:bg-white/5 rounded-full overflow-hidden flex shadow-inner">
+                    <div className="bg-green-500 h-full transition-all duration-700 ease-out"
                          style={{ width: `${(emp.today_active_seconds / totalSec) * 100}%` }} />
-                    <div className="bg-yellow-400 h-full transition-all duration-500"
+                    <div className="bg-yellow-400 h-full transition-all duration-700 ease-out"
                          style={{ width: `${(emp.today_idle_seconds / totalSec) * 100}%` }} />
                   </div>
                 </div>
               )}
 
               {/* Last active */}
-              <p className="text-xs text-gray-400">
-                {emp.status === 'offline'
-                  ? emp.check_in_time ? '✓ Checked in today' : 'Not checked in today'
-                  : emp.last_active
-                  ? `Last active: ${new Date(emp.last_active).toLocaleTimeString()}`
-                  : 'No activity recorded'}
-              </p>
+              <div className="flex items-center gap-2 pt-4 border-t border-gray-100 dark:border-white/5">
+                 <FiClock size={12} className="text-gray-300" />
+                 <p className="text-[10px] font-bold text-gray-400 uppercase tracking-tighter">
+                  {emp.status === 'offline'
+                    ? emp.check_in_time ? '✓ Checked in today' : 'Not checked in today'
+                    : emp.last_active
+                    ? `Active until: ${new Date(emp.last_active).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
+                    : 'No session data'}
+                </p>
+              </div>
             </div>
           );
         })}
       </div>
+
+      <style jsx global>{`
+        .animate-spin-slow { animation: spin 3s linear infinite; }
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+      `}</style>
     </div>
   );
 }

@@ -1,21 +1,21 @@
 'use client';
 
-import { ReactNode } from 'react';
+import { ReactNode, HTMLAttributes } from 'react';
 
-interface GlowCardProps {
+interface GlowCardProps extends HTMLAttributes<HTMLDivElement> {
   children: ReactNode;
-  className?: string;
   goldBorder?: boolean;
 }
 
 /**
- * Simplified GlowCard - Removes all mouse-tracking tilt and 3D effects
- * per user request for a "neat and simple" UI with no hover shadows.
+ * Enhanced GlowCard - Supports standard div props while maintaining
+ * the neat UI style.
  */
-export default function GlowCard({ children, className = '', goldBorder = false }: GlowCardProps) {
+export default function GlowCard({ children, className = '', goldBorder = false, ...props }: GlowCardProps) {
   return (
     <div
       className={`glow-card ${goldBorder ? 'border-primary-500/30' : ''} ${className}`}
+      {...props}
     >
       {children}
     </div>

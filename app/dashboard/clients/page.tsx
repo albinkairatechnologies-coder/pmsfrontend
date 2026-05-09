@@ -1,9 +1,10 @@
 'use client';
 
+import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { clientAPI, authAPI, proposalAPI } from '../../utils/api';
 import { useAuth } from '../../utils/AuthContext';
-import { FiPlus, FiSearch, FiSend, FiChevronDown, FiChevronUp, FiEye, FiCheck, FiClock, FiX } from 'react-icons/fi';
+import { FiPlus, FiSearch, FiSend, FiChevronDown, FiChevronUp, FiEye, FiCheck, FiClock, FiX, FiUser } from 'react-icons/fi';
 import SendProposalModal from '../../components/SendProposalModal';
 
 const STAGES = ['lead','onboarding','planning','design','development','marketing_execution','testing','delivery','completed'];
@@ -144,6 +145,12 @@ export default function ClientsPage() {
                       className="btn-gold gap-2 text-xs py-2 px-3">
                       <FiSend size={13} /> Send Proposal
                     </button>
+                  )}
+                  {['admin','marketing_head','crm_head','team_lead'].includes(user?.role || '') && (
+                    <Link href={`/dashboard/clients/${client.id}`}
+                      className="btn-secondary gap-2 text-xs py-2 px-3 flex items-center">
+                      <FiUser size={13} /> Profiles
+                    </Link>
                   )}
                   <button onClick={() => toggleExpand(client.id)}
                     className="p-2 rounded-xl text-gray-400 hover:text-gray-600 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-white/5 transition-all">

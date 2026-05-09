@@ -28,6 +28,29 @@ export default function NotificationBell() {
   const [domainAlerts, setDomainAlerts]   = useState<any[]>([]);
   const [unread, setUnread]               = useState(0);
   const ref = useRef<HTMLDivElement>(null);
+  const lastUnreadRef = useRef(0);
+  const [hasPermission, setHasPermission] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined' && 'Notification' in window) {
+      if (Notification.permission === 'granted') {
+        setHasPermission(true);
+      } else if (Notification.permission !== 'denied') {
+        Notification.requestPermission().then(permission => {
+          setHasPermission(permission === 'granted');
+        });
+      }
+    }
+  }, []);
+
+  const triggerDesktopNotification = (title: string, body: string) => {
+    if (hasPermission) {
+      new Notification(title, {
+        body,
+        icon: '/favicon.ico', // Adjust if you have a specific icon
+      });
+    }
+  };
 
   const loadDomainAlerts = async () => {
     if (!user || !DOMAIN_ROLES.includes(user.role)) return;
@@ -37,13 +60,13 @@ export default function NotificationBell() {
       res.data.expired.forEach((d: any) => alerts.push({
         id: `domain_exp_${d.id}`, type: 'domain_expired', is_read: 0,
         title: `🔴 Domain Expired: ${d.domain_name}`,
-        message: `Expired on ${d.renewal_date}${d.company_name ? ` — ${d.company_name}` : ''}`,
+        message: `Expired on ${d.renewal_date}`,
         created_at: new Date().toISOString(),
       }));
       res.data.critical.forEach((d: any) => alerts.push({
         id: `domain_crit_${d.id}`, type: 'domain_critical', is_read: 0,
         title: `⚠ Expiring Soon: ${d.domain_name}`,
-        message: `Renews on ${d.renewal_date}${d.company_name ? ` — ${d.company_name}` : ''}`,
+        message: `Renews on ${d.renewal_date}`,
         created_at: new Date().toISOString(),
       }));
       setDomainAlerts(alerts);
@@ -56,8 +79,21 @@ export default function NotificationBell() {
         notificationAPI.getAll(),
         notificationAPI.getUnreadCount(),
       ]);
+      
+      const newCount = cRes.data.count;
+      const prevCount = lastUnreadRef.current;
+
+      // Detect new notifications
+      if (newCount > prevCount && nRes.data.length > 0) {
+        const latest = nRes.data[0];
+        if (!latest.is_read) {
+          triggerDesktopNotification(latest.title, latest.message);
+        }
+      }
+
       setNotifications(nRes.data);
-      setUnread(cRes.data.count);
+      setUnread(newCount);
+      lastUnreadRef.current = newCount;
     } catch { /* ignore */ }
     loadDomainAlerts();
   };

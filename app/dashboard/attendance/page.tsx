@@ -58,6 +58,7 @@ export default function AttendancePage() {
   const [myHistory, setMyHistory]   = useState<any[]>([]);
   const [tab, setTab]               = useState<'today' | 'history' | 'admin'>('today');
   const [loading, setLoading]       = useState(false);
+  const [showImage, setShowImage]   = useState<string | null>(null);
   const [elapsed, setElapsed]       = useState(0);
   const [breakElapsed, setBreakElapsed] = useState(0);
   const timerRef      = useRef<any>(null);
@@ -130,7 +131,12 @@ export default function AttendancePage() {
 
   const handleCheckIn = async () => {
     setLoading(true);
-    try { await attendanceAPI.checkIn(); await loadToday(); }
+    try { 
+      await attendanceAPI.checkIn(); 
+      await loadToday(); 
+      setShowImage('/morningatt.gif');
+      setTimeout(() => setShowImage(null), 3500);
+    }
     catch (e: any) { alert(e.response?.data?.error || 'Check-in failed'); }
     finally { setLoading(false); }
   };
@@ -138,7 +144,12 @@ export default function AttendancePage() {
   const handleCheckOut = async () => {
     if (!confirm('Confirm check-out?')) return;
     setLoading(true);
-    try { await attendanceAPI.checkOut(); await loadToday(); }
+    try { 
+      await attendanceAPI.checkOut(); 
+      await loadToday(); 
+      setShowImage('/chechout.jpg');
+      setTimeout(() => setShowImage(null), 3500);
+    }
     catch (e: any) { alert(e.response?.data?.error || 'Check-out failed'); }
     finally { setLoading(false); }
   };
@@ -427,6 +438,11 @@ export default function AttendancePage() {
 
   return (
     <div>
+      {showImage && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm animate-fade-in" onClick={() => setShowImage(null)}>
+          <img src={showImage} alt="Attendance Status" className="max-w-[90vw] max-h-[80vh] rounded-2xl shadow-2xl animate-zoom-in object-contain" />
+        </div>
+      )}
       <div className="flex items-center justify-between mb-8">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white tracking-tight">Attendance</h1>

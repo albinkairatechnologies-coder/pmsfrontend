@@ -33,7 +33,7 @@ export default function RootLayout({
       </head>
       <body>
         <AuthProvider>
-          <div className="min-h-screen bg-gray-50 dark:bg-darker">
+          <div className="min-h-screen bg-transparent dark:bg-darker">
             {children}
           </div>
         </AuthProvider>
