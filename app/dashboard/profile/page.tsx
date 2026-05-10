@@ -31,22 +31,25 @@ export default function ProfilePage() {
   });
 
   useEffect(() => {
-    if (user) {
-      setProfileForm({
-        name:                    user.name || '',
-        phone:                   user.phone || '',
-        bio:                     user.bio || '',
-        dob:                     user.dob ? user.dob.split('T')[0] : '',
-        address:                 user.address || '',
-        emergency_contact_name:  user.emergency_contact_name || '',
-        emergency_contact_phone: user.emergency_contact_phone || '',
-      });
-      if (user.profile_image) {
-        setImgPreview(`${API_URL}/auth/profile/image/${user.profile_image}${user.profile_image.includes('?') ? '' : `?v=${Date.now()}`}`);
-        setImgError(false);
-      }
-      rewardsAPI.getStats().then(r => setRewards(r.data)).catch(() => {});
+    if (!user) return;
+    setProfileForm({
+      name:                    user.name || '',
+      phone:                   user.phone || '',
+      bio:                     user.bio || '',
+      dob:                     user.dob ? user.dob.split('T')[0] : '',
+      address:                 user.address || '',
+      emergency_contact_name:  user.emergency_contact_name || '',
+      emergency_contact_phone: user.emergency_contact_phone || '',
+    });
+    if (user.profile_image) {
+      setImgPreview(
+        user.profile_image.startsWith('data:')
+          ? user.profile_image
+          : `${API_URL}/auth/profile/image/${user.profile_image}`
+      );
+      setImgError(false);
     }
+    rewardsAPI.getStats().then(r => setRewards(r.data)).catch(() => {});
   }, [user]);
 
   const showSaved = (msg: string) => {
@@ -63,10 +66,9 @@ export default function ProfilePage() {
       fd.append('image', file);
       const res = await authAPI.uploadProfileImage(fd);
       if (res.data.profile_image) {
-        setImgPreview(`${API_URL}/auth/profile/image/${res.data.profile_image}`);
+        await refreshUser();
         setImgError(false);
       }
-      await refreshUser();
       showSaved(res.data.message || 'Profile photo updated!');
     } catch (err: any) {
       console.error('Upload error:', err);

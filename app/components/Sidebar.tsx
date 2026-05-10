@@ -106,7 +106,9 @@ export default function Sidebar({ isOpen, setIsOpen }: { isOpen: boolean, setIsO
   const initials = user?.name?.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase() || '?';
   const avatarColor = AVATAR_COLORS[(user?.name?.charCodeAt(0) || 0) % AVATAR_COLORS.length];
   const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
-  const profileImgUrl = user?.profile_image ? `${API_URL}/auth/profile/image/${user.profile_image}${user.profile_image.includes('?') ? '' : `?v=${user.created_at ? new Date(user.created_at).getTime() : '0'}`}` : null;
+  const profileImgUrl = user?.profile_image
+    ? (user.profile_image.startsWith('data:') ? user.profile_image : `${API_URL}/auth/profile/image/${user.profile_image}`)
+    : null;
   const [imgError, setImgError] = useState(false);
 
   useEffect(() => {
