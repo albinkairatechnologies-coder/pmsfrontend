@@ -1,13 +1,13 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { taskAPI, orgAPI, rewardsAPI } from '../../../utils/api';
 import { useAuth } from '../../../utils/AuthContext';
 import { 
   FiClock, FiUser, FiCalendar, FiActivity, FiUsers, 
   FiEye, FiPlus, FiSend, FiPaperclip, FiMoreHorizontal,
-  FiVideo, FiSearch, FiLayout, FiCheckCircle, FiMic, FiSmile, FiBell, FiList, FiAward, FiX
+  FiVideo, FiSearch, FiLayout, FiCheckCircle, FiMic, FiSmile, FiBell, FiList, FiAward, FiX, FiTrash2, FiCornerUpRight
 } from 'react-icons/fi';
 
 /**
@@ -24,6 +24,7 @@ export default function TaskDetailPage() {
   const [rewards, setRewards] = useState<any>({ total_coins: 0, history: [] });
   const [newMessage, setNewMessage] = useState('');
   const [showMemberSelect, setShowMemberSelect] = useState<'participant' | 'observer' | null>(null);
+  const [memberSearch, setMemberSearch] = useState('');
   const [activePanel, setActivePanel] = useState<'chat' | 'logs' | 'subtasks' | 'history' | 'alerts'>('chat');
   const [subtasks, setSubtasks] = useState<any[]>([]);
   const [newSubtask, setNewSubtask] = useState('');
@@ -56,6 +57,22 @@ export default function TaskDetailPage() {
       const res = await taskAPI.getMessages(Number(id));
       setMessages(res.data);
     } catch (err) {}
+  };
+
+  const handleDeleteMessage = async (msgId: number) => {
+    if (!confirm('Delete this message?')) return;
+    try {
+      await taskAPI.deleteMessage(Number(id), msgId);
+      loadMessages();
+    } catch (err) {
+      alert('Failed to delete message');
+    }
+  };
+
+  const handleForwardMessage = (content: string) => {
+    if (!content) return;
+    setNewMessage(`[Forwarded]: ${content}`);
+    alert('Message content placed into the composer box for you.');
   };
 
   const loadRewards = async () => {
@@ -131,192 +148,421 @@ export default function TaskDetailPage() {
       
       {showMemberSelect && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-md z-[600] flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-dark-card rounded-2xl p-6 w-full max-w-[320px] shadow-2xl border border-white/10 animate-scale-in">
-             <h2 className="text-[10px] font-black uppercase text-gray-400 mb-4 tracking-widest text-center">Assign {showMemberSelect}</h2>
-             <div className="max-h-60 overflow-y-auto pr-2 custom-scrollbar space-y-1">
-                {allUsers.map(u => (
+          <div className="bg-white dark:bg-dark-card rounded-2xl w-full max-w-[360px] shadow-2xl border border-white/10 animate-scale-in overflow-hidden">
+            {/* Header */}
+            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-white/5">
+              <div>
+                <h2 className="text-[11px] font-black uppercase tracking-widest text-gray-800 dark:text-white">
+                  {showMemberSelect === 'participant' ? '👥 Participants' : '👁️ Observers'}
+                </h2>
+                <p className="text-[9px] text-gray-400 mt-0.5">Add or remove members</p>
+              </div>
+              <button onClick={() => { setShowMemberSelect(null); setMemberSearch(''); }} className="p-2 text-gray-400 hover:text-red-500 transition-colors"><FiX size={16}/></button>
+            </div>
+
+            {/* Current members */}
+            {(() => {
+              const current = showMemberSelect === 'participant' ? task?.participants : task?.observers;
+              return current && current.length > 0 ? (
+                <div className="px-5 pt-4">
+                  <p className="text-[9px] font-black uppercase tracking-widest text-gray-400 mb-2">Current</p>
+                  <div className="flex flex-wrap gap-2">
+                    {current.map((m: any) => (
+                      <div key={m.id} className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-[10px] font-black ${
+                        showMemberSelect === 'participant'
+                          ? 'bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600'
+                          : 'bg-purple-50 dark:bg-purple-500/10 text-purple-600'
+                      }`}>
+                        <span>{m.name}</span>
+                        <button onClick={() => handleRemoveMember(m.id, showMemberSelect!)} className="hover:text-red-500 transition-colors ml-0.5">
+                          <FiX size={10}/>
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : null;
+            })()}
+
+            {/* Search */}
+            <div className="px-5 pt-4">
+              <p className="text-[9px] font-black uppercase tracking-widest text-gray-400 mb-2">Add Member</p>
+              <div className="relative">
+                <FiSearch size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                <input
+                  autoFocus
+                  type="text"
+                  placeholder="Search by name..."
+                  value={memberSearch}
+                  onChange={e => setMemberSearch(e.target.value)}
+                  className="w-full pl-9 pr-4 py-2.5 bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl text-[12px] outline-none dark:text-white"
+                />
+              </div>
+            </div>
+
+            {/* User list */}
+            <div className="px-5 py-3 max-h-52 overflow-y-auto custom-scrollbar space-y-1">
+              {allUsers
+                .filter(u => {
+                  const current = showMemberSelect === 'participant' ? task?.participants : task?.observers;
+                  const alreadyAdded = current?.some((m: any) => m.id === u.id);
+                  const matchSearch = u.name.toLowerCase().includes(memberSearch.toLowerCase());
+                  return !alreadyAdded && matchSearch;
+                })
+                .map(u => (
                   <button key={u.id} onClick={async () => {
                     try {
                       if (showMemberSelect === 'participant') await taskAPI.addParticipant(Number(id), u.id);
                       else await taskAPI.addObserver(Number(id), u.id);
-                      setShowMemberSelect(null);
                       loadTask();
+                      setMemberSearch('');
                     } catch (err) {}
-                  }} className="w-full flex items-center gap-3 p-3 hover:bg-gray-100 dark:hover:bg-white/5 rounded-xl transition-all">
-                    <div className="w-8 h-8 rounded-lg bg-indigo-500/10 text-indigo-500 flex items-center justify-center text-[10px] font-black">{u.name[0]}</div>
-                    <div className="text-left font-black text-[12px] text-gray-800 dark:text-gray-100">{u.name}</div>
+                  }} className="w-full flex items-center gap-3 p-2.5 hover:bg-gray-50 dark:hover:bg-white/5 rounded-xl transition-all text-left">
+                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-[10px] font-black ${
+                      showMemberSelect === 'participant'
+                        ? 'bg-indigo-500/10 text-indigo-500'
+                        : 'bg-purple-500/10 text-purple-500'
+                    }`}>{u.name[0]}</div>
+                    <div>
+                      <p className="text-[12px] font-black text-gray-800 dark:text-gray-100">{u.name}</p>
+                      <p className="text-[9px] text-gray-400 uppercase tracking-wide">{u.role?.replace('_', ' ')}</p>
+                    </div>
+                    <FiPlus size={14} className="ml-auto text-gray-300" />
                   </button>
-                ))}
-             </div>
-             <button onClick={() => setShowMemberSelect(null)} className="w-full mt-4 py-3 text-[10px] font-black text-gray-400 hover:text-gray-600 uppercase tracking-widest transition-colors">Close</button>
+                ))
+              }
+              {allUsers.filter(u => {
+                const current = showMemberSelect === 'participant' ? task?.participants : task?.observers;
+                const alreadyAdded = current?.some((m: any) => m.id === u.id);
+                return !alreadyAdded && u.name.toLowerCase().includes(memberSearch.toLowerCase());
+              }).length === 0 && (
+                <p className="text-center text-[10px] text-gray-400 py-4">No members to add</p>
+              )}
+            </div>
+
+            <div className="px-5 pb-4">
+              <button onClick={() => { setShowMemberSelect(null); setMemberSearch(''); }} className="w-full py-2.5 text-[10px] font-black text-gray-400 hover:text-gray-600 uppercase tracking-widest border border-gray-100 dark:border-white/10 rounded-xl transition-colors">Done</button>
+            </div>
           </div>
         </div>
       )}
 
       {/* COMPACT SIDEBAR */}
-      <div className="w-[340px] h-full flex flex-col border-r border-gray-100 dark:border-white/5 bg-[#F8FAFC] dark:bg-[#08090D] overflow-y-auto custom-scrollbar p-5 space-y-4 pb-20">
+      {/* PREMIUM MODERNISED SIDEBAR */}
+      <div className="w-[360px] h-full flex flex-col border-r border-gray-200 dark:border-white/5 bg-[#ffffff] dark:bg-[#0B0E14] overflow-y-auto custom-scrollbar shadow-sm">
         
-        {/* GOLD COINS REWARD DISPLAY (EMPLOYEE APPRECIATION) */}
-        <div className="bg-gradient-to-br from-yellow-400 to-amber-600 rounded-[20px] p-5 text-white shadow-xl shadow-amber-500/20 relative overflow-hidden group">
-            <div className="absolute top-0 right-0 p-4 opacity-20 group-hover:scale-150 transition-transform duration-700"><FiAward size={60}/></div>
-            <div className="relative z-10">
-                <span className="text-[9px] font-black uppercase tracking-[0.2em] opacity-80">Total Gold Coins Earned</span>
-                <div className="flex items-end gap-2 mt-1">
-                    <h2 className="text-3xl font-black">{rewards.total_coins}</h2>
-                    <span className="text-[10px] font-bold pb-1 opacity-70">Coins in Balance</span>
+        {/* Gold Rewards Banner - Re-styled to be more integrated */}
+        <div className="px-5 pt-6 pb-4">
+            <div className="bg-[#D97706] rounded-2xl p-5 text-white shadow-xl shadow-amber-700/20 relative overflow-hidden flex items-center justify-between gap-3 animate-fade-in">
+                {/* Subtle vector pattern */}
+                <div className="absolute inset-0 opacity-10" style={{ backgroundImage: `radial-gradient(#fff 1px, transparent 1px)`, backgroundSize: '10px 10px' }}></div>
+                <div className="absolute -right-4 -top-4 w-24 h-24 bg-white/10 rounded-full"></div>
+                <div className="relative z-10 flex-1">
+                    <p className="text-[10px] font-black uppercase tracking-widest opacity-80">Rewards Balance</p>
+                    <div className="text-3xl font-black flex items-end gap-1.5 leading-none mt-1">{rewards.total_coins} <span className="text-[11px] font-bold mb-1 opacity-80">GOLD COINS</span></div>
                 </div>
-                <p className="text-[9px] mt-2 font-medium opacity-90 leading-tight">Complete tasks on time and maintain perfect attendance to win more rewards!</p>
+                <div className="relative z-10 w-12 h-12 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center border border-white/20 shadow-inner text-white"><FiAward size={24}/></div>
             </div>
         </div>
 
-        <div className="flex items-center justify-between">
-            <h1 className="text-[20px] font-black text-gray-900 dark:text-white tracking-tighter leading-none truncate">{task.title}</h1>
-            <button className="p-2 text-gray-400 hover:bg-gray-100 rounded-full"><FiMoreHorizontal size={18}/></button>
+        {/* Task Main Info Card */}
+        <div className="px-5 pb-5 border-b border-gray-100 dark:border-white/5">
+            <div className="flex justify-between items-start gap-3 mb-3">
+                <h1 className="text-lg font-black text-gray-900 dark:text-white leading-tight tracking-tight">{task.title}</h1>
+                <button className="p-2 text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5 rounded-full transition-colors"><FiMoreHorizontal size={18}/></button>
+            </div>
+            <p className="text-[12px] text-gray-500 dark:text-gray-400 leading-relaxed bg-gray-50 dark:bg-white/5 p-3 rounded-xl border border-gray-100 dark:border-white/5">
+               {task.description || "No description set for this task."}
+            </p>
         </div>
 
-        <div className="bg-white dark:bg-[#12141D] rounded-[20px] p-4 shadow-sm border border-gray-100 dark:border-white/5">
-            <p className="text-[11px] font-bold text-gray-600 dark:text-gray-400 leading-relaxed italic opacity-80">{task.description || "No description provided."}</p>
-        </div>
-
-        {/* Small Data Cards */}
-        <div className="bg-white dark:bg-[#12141D] rounded-[20px] p-5 shadow-sm border border-gray-100 dark:border-white/5 space-y-3">
-            {[
-                { label: 'OWNER:', value: task.assigned_by_name, color: 'text-orange-600' },
-                { label: 'ASSIGNEE:', value: task.assigned_name || 'Unassigned', color: 'text-blue-600' },
-                { label: 'DEADLINE:', value: formatDate(task.due_date), color: 'text-indigo-600 font-bold' },
-                { label: 'STATUS:', value: task.status.replace('_',' '), color: 'text-blue-500 font-black tracking-widest' },
-            ].map((row, i) => (
-                <div key={i} className="flex flex-col">
-                    <span className="text-[8px] font-black text-gray-300 dark:text-gray-600 tracking-widest">{row.label}</span>
-                    <div className={`text-[11px] font-black uppercase mt-0.5 tracking-tight ${row.color}`}>{row.value}</div>
+        {/* Structured Information Rows - MATCHES REFERENCE LOOK */}
+        <div className="p-5 space-y-5">
+            <div className="space-y-4">
+                {/* Owner */}
+                <div className="flex items-start group">
+                    <span className="w-24 text-[12px] font-medium text-gray-400 dark:text-gray-500 pt-0.5 flex-shrink-0">Task owner:</span>
+                    <div className="flex items-center gap-2 flex-1">
+                        <div className="w-6 h-6 rounded-full bg-orange-100 dark:bg-orange-500/20 flex items-center justify-center text-[10px] font-bold text-orange-600 dark:text-orange-300 border border-orange-200 dark:border-transparent">{task.assigned_by_name?.[0] || 'A'}</div>
+                        <span className="text-[13px] font-bold text-gray-800 dark:text-gray-200">{task.assigned_by_name || 'Manager'}</span>
+                    </div>
                 </div>
-            ))}
-        </div>
 
-        <div className="bg-white dark:bg-[#12141D] rounded-[20px] p-5 shadow-sm border border-gray-100 dark:border-white/5 space-y-3">
-            <div className="flex justify-between items-center"><h3 className="text-[9px] font-black text-gray-300 uppercase">Participants:</h3> <button onClick={() => setShowMemberSelect('participant')} className="text-indigo-500 text-[9px] font-black hover:underline">+ ADD</button></div>
-            <div className="space-y-2">
-                {task.participants?.map((p: any) => (
-                  <div key={p.id} className="flex items-center justify-between group">
-                    <div className="flex items-center gap-2 font-black text-[11px]"><div className="w-7 h-7 rounded-lg bg-indigo-50 dark:bg-white/5 flex items-center justify-center border border-indigo-100">{p.name[0]}</div>{p.name}</div>
-                    <button onClick={() => handleRemoveMember(p.id, 'participant')} className="p-1.5 text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all"><FiX size={12} /></button>
-                  </div>
-                ))}
-                {(!task.participants || task.participants.length === 0) && <p className="text-[10px] text-gray-300 italic px-1">None yet</p>}
+                {/* Assignee */}
+                <div className="flex items-start group">
+                    <span className="w-24 text-[12px] font-medium text-gray-400 dark:text-gray-500 pt-0.5 flex-shrink-0">Assignee:</span>
+                    <div className="flex items-center gap-2 flex-1">
+                        <div className="w-6 h-6 rounded-full bg-blue-100 dark:bg-blue-500/20 flex items-center justify-center text-[10px] font-bold text-blue-600 dark:text-blue-300 border border-blue-200 dark:border-transparent">{task.assigned_name?.[0] || 'U'}</div>
+                        <span className="text-[13px] font-bold text-gray-800 dark:text-gray-200">{task.assigned_name || 'Unassigned'}</span>
+                    </div>
+                </div>
+
+                {/* Deadline */}
+                <div className="flex items-start group">
+                    <span className="w-24 text-[12px] font-medium text-gray-400 dark:text-gray-500 pt-0.5 flex-shrink-0">Deadline:</span>
+                    <div className="flex flex-col gap-1.5 flex-1">
+                        <div className="flex items-center gap-2 text-red-500 dark:text-red-400">
+                            <FiCalendar size={14}/>
+                            <span className="text-[13px] font-bold">{formatDate(task.due_date)}</span>
+                        </div>
+                        {task.due_date && new Date(task.due_date) < new Date() && (
+                            <div className="inline-flex items-center w-fit px-2 py-0.5 rounded-md bg-red-50 dark:bg-red-500/10 border border-red-100 dark:border-red-900/30 text-[10px] font-bold text-red-500">Overdue</div>
+                        )}
+                    </div>
+                </div>
+
+                {/* Status */}
+                <div className="flex items-center group">
+                    <span className="w-24 text-[12px] font-medium text-gray-400 dark:text-gray-500 flex-shrink-0">Status:</span>
+                    <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold tracking-wide uppercase border ${
+                        task.status === 'completed' ? 'bg-emerald-50 text-emerald-600 border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-transparent' :
+                        task.status === 'in_progress' ? 'bg-blue-50 text-blue-600 border-blue-200 dark:bg-blue-500/10 dark:text-blue-400 dark:border-transparent' :
+                        'bg-amber-50 text-amber-600 border-amber-200 dark:bg-amber-500/10 dark:text-amber-400 dark:border-transparent'
+                    }`}>
+                        <span className="w-1.5 h-1.5 rounded-full bg-current"></span>
+                        {task.status.replace('_', ' ')}
+                    </div>
+                </div>
+            </div>
+
+            <div className="w-full h-px bg-gray-100 dark:bg-white/5 my-1"></div>
+
+            {/* Participants & Observers Grouped like Reference */}
+            <div className="space-y-4">
+                <div className="flex items-start justify-between">
+                    <span className="w-24 text-[12px] font-medium text-gray-400 dark:text-gray-500 pt-0.5 flex-shrink-0">Participants:</span>
+                    <div className="flex-1">
+                        <div className="flex flex-wrap gap-2">
+                            {task.participants?.map((p: any) => (
+                                <div key={p.id} className="group/item relative flex items-center gap-2 pr-2 pl-1 py-1 bg-gray-50 dark:bg-white/5 rounded-full border border-gray-100 dark:border-white/10 shadow-sm transition-all hover:bg-white dark:hover:bg-white/10">
+                                    <div className="w-6 h-6 rounded-full bg-indigo-500 text-white flex items-center justify-center text-[10px] font-bold border-2 border-white dark:border-gray-800 shadow-sm">{p.name[0]}</div>
+                                    <span className="text-[12px] font-bold text-gray-700 dark:text-gray-300 truncate max-w-[120px]">{p.name.split(' ')[0]}</span>
+                                    <button onClick={() => handleRemoveMember(p.id, 'participant')} className="text-gray-400 hover:text-red-500 opacity-0 group-hover/item:opacity-100 transition-opacity absolute -top-1 -right-1 bg-white dark:bg-gray-900 rounded-full shadow-sm p-0.5"><FiX size={10}/></button>
+                                </div>
+                            ))}
+                            <button onClick={() => setShowMemberSelect('participant')} className="w-7 h-7 rounded-full border border-dashed border-gray-300 dark:border-white/20 flex items-center justify-center text-gray-400 hover:text-indigo-500 hover:border-indigo-500 transition-all"><FiPlus size={14}/></button>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="flex items-start justify-between">
+                    <span className="w-24 text-[12px] font-medium text-gray-400 dark:text-gray-500 pt-0.5 flex-shrink-0">Observers:</span>
+                    <div className="flex-1">
+                        <div className="flex flex-wrap gap-2">
+                            {task.observers?.map((o: any) => (
+                                <div key={o.id} className="group/item relative flex items-center gap-2 pr-2 pl-1 py-1 bg-gray-50 dark:bg-white/5 rounded-full border border-gray-100 dark:border-white/10 shadow-sm transition-all hover:bg-white dark:hover:bg-white/10">
+                                    <div className="w-6 h-6 rounded-full bg-purple-500 text-white flex items-center justify-center text-[10px] font-bold border-2 border-white dark:border-gray-800 shadow-sm">{o.name[0]}</div>
+                                    <span className="text-[12px] font-bold text-gray-700 dark:text-gray-300 truncate max-w-[120px]">{o.name.split(' ')[0]}</span>
+                                    <button onClick={() => handleRemoveMember(o.id, 'observer')} className="text-gray-400 hover:text-red-500 opacity-0 group-hover/item:opacity-100 transition-opacity absolute -top-1 -right-1 bg-white dark:bg-gray-900 rounded-full shadow-sm p-0.5"><FiX size={10}/></button>
+                                </div>
+                            ))}
+                            <button onClick={() => setShowMemberSelect('observer')} className="w-7 h-7 rounded-full border border-dashed border-gray-300 dark:border-white/20 flex items-center justify-center text-gray-400 hover:text-purple-500 hover:border-purple-500 transition-all"><FiPlus size={14}/></button>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
 
-        {/* Observers */}
-        <div className="bg-white dark:bg-[#12141D] rounded-[20px] p-5 shadow-sm border border-gray-100 dark:border-white/5 space-y-3">
-            <div className="flex justify-between items-center"><h3 className="text-[9px] font-black text-gray-300 uppercase">Observers:</h3> <button onClick={() => setShowMemberSelect('observer')} className="text-purple-500 text-[9px] font-black hover:underline">+ ADD</button></div>
-            <div className="space-y-2">
-                {task.observers?.map((o: any) => (
-                  <div key={o.id} className="flex items-center justify-between group">
-                    <div className="flex items-center gap-2 font-black text-[11px]"><div className="w-7 h-7 rounded-lg bg-purple-50 dark:bg-purple-500/10 flex items-center justify-center border border-purple-100 text-purple-500">{o.name[0]}</div>{o.name}</div>
-                    <button onClick={() => handleRemoveMember(o.id, 'observer')} className="p-1.5 text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all"><FiX size={12} /></button>
-                  </div>
-                ))}
-                {(!task.observers || task.observers.length === 0) && <p className="text-[10px] text-gray-300 italic px-1">None yet</p>}
-            </div>
-        </div>
-
-        {/* SHRUNK ACTION TRIAD */}
-        <div className="grid grid-cols-3 gap-2">
-            <button 
-              disabled={task.status === 'in_progress'}
-              onClick={() => updateTaskStatus('in_progress')} 
-              className={`flex flex-col items-center justify-center p-3 rounded-2xl transition-all active:scale-95 ${task.status === 'in_progress' ? 'bg-blue-500 text-white shadow-lg shadow-blue-500/20' : 'bg-green-500/10 text-green-600 hover:bg-green-500/20'}`}>
-              <FiActivity size={14}/>
-              <span className="text-[8px] font-black uppercase mt-1">{task.status === 'in_progress' ? 'Working' : 'Start'}</span>
-            </button>
-            <button 
-              disabled={task.status === 'review'}
-              onClick={() => updateTaskStatus('review')} 
-              className={`flex flex-col items-center justify-center p-3 rounded-2xl transition-all active:scale-95 ${task.status === 'review' ? 'bg-orange-500 text-white shadow-lg shadow-orange-500/20' : 'bg-orange-500/10 text-orange-600 hover:bg-orange-500/20'}`}>
-              <FiClock size={14}/>
-              <span className="text-[8px] font-black uppercase mt-1">Pause</span>
-            </button>
-            <button 
-              disabled={task.status === 'completed'}
-              onClick={() => updateTaskStatus('completed')} 
-              className={`flex flex-col items-center justify-center p-3 rounded-2xl transition-all active:scale-95 ${task.status === 'completed' ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20' : 'bg-blue-600 text-white hover:bg-blue-700 shadow-lg shadow-blue-600/20'}`}>
-              <FiCheckCircle size={14}/>
-              <span className="text-[8px] font-black uppercase mt-1">{task.status === 'completed' ? 'Done' : 'Complete'}</span>
-            </button>
-        </div>
-
-        {/* Panel Tab Buttons */}
-        <div className="grid grid-cols-2 gap-2 pb-10">
-            {([
-              { key: 'logs',     icon: <FiCheckCircle size={13}/>, label: 'Logs',     color: 'hover:text-green-500' },
-              { key: 'alerts',   icon: <FiBell size={13}/>,        label: 'Alerts',   color: 'hover:text-red-500' },
-              { key: 'subtasks', icon: <FiList size={13}/>,        label: 'Subtasks', color: 'hover:text-indigo-500' },
-              { key: 'history',  icon: <FiClock size={13}/>,       label: 'History',  color: 'hover:text-orange-500' },
-            ] as const).map(tab => (
-                <button key={tab.key} onClick={() => setActivePanel(p => p === tab.key ? 'chat' : tab.key)}
-                  className={`flex items-center gap-2 p-3 border rounded-xl text-[10px] font-black transition-all ${
-                    activePanel === tab.key
-                      ? 'bg-indigo-600 text-white border-indigo-600 shadow-lg shadow-indigo-500/20'
-                      : `bg-white dark:bg-[#12141D] border-gray-100 dark:border-white/10 text-gray-400 ${tab.color}`
+        <div className="mt-auto p-5 space-y-5">
+            {/* Task Status Control Group */}
+            <div className="flex gap-2">
+                <button 
+                  disabled={task.status === 'in_progress'}
+                  onClick={() => updateTaskStatus('in_progress')} 
+                  className={`flex-1 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-wider transition-all border flex items-center justify-center gap-2 shadow-sm ${
+                    task.status === 'in_progress' 
+                    ? 'bg-blue-50 text-blue-600 border-blue-200 shadow-blue-500/5' 
+                    : 'bg-white dark:bg-white/5 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-white/10 hover:bg-gray-50 dark:hover:bg-white/10 active:scale-[0.98]'
                   }`}>
-                    {tab.icon} <span className="truncate">{tab.label}</span>
+                  <FiActivity size={14}/>
+                  Start
                 </button>
-            ))}
+                <button 
+                  disabled={task.status === 'review'}
+                  onClick={() => updateTaskStatus('review')} 
+                  className={`flex-1 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-wider transition-all border flex items-center justify-center gap-2 shadow-sm ${
+                    task.status === 'review' 
+                    ? 'bg-amber-50 text-amber-600 border-amber-200 shadow-amber-500/5' 
+                    : 'bg-white dark:bg-white/5 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-white/10 hover:bg-gray-50 dark:hover:bg-white/10 active:scale-[0.98]'
+                  }`}>
+                  <FiClock size={14}/>
+                  Pause
+                </button>
+                <button 
+                  disabled={task.status === 'completed'}
+                  onClick={() => updateTaskStatus('completed')} 
+                  className={`flex-1 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-wider transition-all flex items-center justify-center gap-2 shadow-md active:scale-[0.98] text-white ${
+                    task.status === 'completed'
+                    ? 'bg-emerald-600 border border-emerald-700 shadow-emerald-500/20'
+                    : 'bg-indigo-600 hover:bg-indigo-700 shadow-indigo-500/20'
+                  }`}>
+                  <FiCheckCircle size={14}/>
+                  {task.status === 'completed' ? 'Done' : 'Finish'}
+                </button>
+            </div>
+
+            {/* Tabbed Nav Grid */}
+            <div className="grid grid-cols-2 gap-3">
+                {([
+                  { key: 'logs',     icon: <FiCheckCircle size={14}/>, label: 'Task Logs',     color: 'text-emerald-600 bg-emerald-50 dark:bg-emerald-500/10' },
+                  { key: 'subtasks', icon: <FiList size={14}/>,        label: 'Subtasks',      color: 'text-blue-600 bg-blue-50 dark:bg-blue-500/10' },
+                  { key: 'history',  icon: <FiClock size={14}/>,       label: 'Activity',      color: 'text-orange-600 bg-orange-50 dark:bg-orange-500/10' },
+                  { key: 'alerts',   icon: <FiBell size={14}/>,        label: 'Alerts',        color: 'text-red-600 bg-red-50 dark:bg-red-500/10' },
+                ] as const).map(tab => (
+                    <button key={tab.key} onClick={() => setActivePanel(p => p === tab.key ? 'chat' : tab.key)}
+                      className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-[12px] font-bold transition-all border ${
+                        activePanel === tab.key
+                          ? 'bg-indigo-600 text-white border-indigo-600 shadow-lg shadow-indigo-500/20 ring-2 ring-indigo-600 ring-opacity-20'
+                          : `bg-gray-50 dark:bg-white/5 border-gray-100 dark:border-white/5 text-gray-600 dark:text-gray-300 hover:bg-white dark:hover:bg-white/10 hover:shadow-sm hover:border-gray-200`
+                      }`}>
+                        <div className={`p-1.5 rounded-lg ${activePanel === tab.key ? 'bg-white/20' : tab.color}`}>
+                            {tab.icon}
+                        </div>
+                        <span className="truncate">{tab.label}</span>
+                    </button>
+                ))}
+            </div>
         </div>
       </div>
 
       {/* RIGHT PANEL */}
-      <div className="flex-1 flex flex-col h-full bg-[#E4EDF6] dark:bg-[#0A0B10] relative">
-         <div className="absolute inset-0 opacity-[0.04]" style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M11 18c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7z' fill='%232563eb'/%3E%3C/svg%3E")` }} />
+      {/* RIGHT PANEL (Chat Area) */}
+      <div className="flex-1 flex flex-col h-full bg-[#94b9d8] dark:bg-[#0A0B10] relative overflow-hidden">
+         {/* Patterned Background */}
+         <div className="absolute inset-0 opacity-[0.15] dark:opacity-[0.05]" style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg width='120' height='120' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M11 18c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7z' fill='%23ffffff' fill-opacity='0.5'/%3E%3Cpath d='M45 65c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm30-40c2.2 0 4-1.8 4-4s-1.8-4-4-4-4 1.8-4 4 1.8 4 4 4z' fill='%23ffffff' fill-opacity='0.5'/%3E%3Cpath d='M20 80l5-5 5 5-5 5zM80 80l5-5 5 5-5 5zM50 20l5-5 5 5-5 5z' fill='%23ffffff' fill-opacity='0.5'/%3E%3C/svg%3E")` }} />
 
-         {/* Header */}
-         <div className="flex items-center justify-between px-8 py-3 bg-white/80 dark:bg-dark-card/90 backdrop-blur-3xl border-b border-gray-100 dark:border-white/5 z-40">
+         {/* Enhanced Header with Actions matching Reference Image */}
+         <div className="flex items-center justify-between px-6 py-3 bg-white/90 dark:bg-dark-card/90 backdrop-blur-xl border-b border-gray-200 dark:border-white/5 z-40 shadow-sm">
             <div className="flex items-center gap-3">
-               <div className="p-2 bg-blue-50 dark:bg-blue-500/10 text-blue-500 rounded-xl"><FiLayout size={18}/></div>
+               <div className="w-10 h-10 bg-blue-100 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400 rounded-full flex items-center justify-center"><FiMessageSquare size={18}/></div>
                <div>
-                  <h2 className="text-[13px] font-black text-gray-900 dark:text-gray-100 tracking-tight leading-none mb-0.5">
-                    {activePanel === 'chat' ? 'Task Chat' : activePanel === 'logs' ? 'Activity Logs' : activePanel === 'subtasks' ? 'Subtasks' : activePanel === 'history' ? 'History' : 'Alerts'}
+                  <h2 className="text-[14px] font-bold text-gray-900 dark:text-gray-100 tracking-tight leading-none mb-0.5">
+                    {activePanel === 'chat' ? 'Task chat' : activePanel === 'logs' ? 'Activity Logs' : activePanel === 'subtasks' ? 'Subtasks' : activePanel === 'history' ? 'History' : 'Alerts'}
                   </h2>
-                  <p className="text-[8px] font-black text-gray-400 uppercase tracking-widest opacity-70">{(task.participants?.length || 0) + 1} MEMBERS</p>
+                  <p className="text-[11px] font-medium text-gray-500 dark:text-gray-400 opacity-80">{(task.participants?.length || 0) + 1} members</p>
                </div>
             </div>
-            <div className="flex items-center gap-2">
-              {activePanel !== 'chat' && (
-                <button onClick={() => setActivePanel('chat')} className="px-3 py-1.5 text-[9px] font-black text-gray-400 hover:text-indigo-500 border border-gray-200 dark:border-white/10 rounded-lg transition-all">← Back to Chat</button>
-              )}
+            
+            <div className="flex items-center gap-3">
+               {activePanel === 'chat' && (
+                 <div className="flex items-center gap-2">
+                    <button className="flex items-center gap-2 px-4 py-2 bg-[#8e44ad] hover:bg-[#732d91] text-white rounded-lg text-xs font-bold shadow-md transition-all">
+                       <FiVideo size={14} /> <span>Video call</span>
+                    </button>
+                    <div className="h-6 w-[1px] bg-gray-200 dark:bg-white/10 mx-1"></div>
+                    <button className="p-2 text-gray-400 hover:text-gray-700 dark:hover:text-white rounded-full transition-colors"><FiUsers size={16} /></button>
+                    <button className="p-2 text-gray-400 hover:text-gray-700 dark:hover:text-white rounded-full transition-colors"><FiSearch size={16} /></button>
+                 </div>
+               )}
+               {activePanel !== 'chat' && (
+                 <button onClick={() => setActivePanel('chat')} className="px-3 py-1.5 text-[11px] font-bold text-indigo-600 bg-indigo-50 dark:bg-indigo-500/10 rounded-lg hover:bg-indigo-100 transition-all">← Back to Chat</button>
+               )}
             </div>
          </div>
 
          {/* CHAT PANEL */}
          {activePanel === 'chat' && (
            <>
-             <div className="flex-1 overflow-y-auto px-8 pt-8 pb-32 space-y-4 z-0 custom-scrollbar scroll-smooth">
-                {messages.filter(m => m.message_type !== 'subtask').map((msg, i) => {
-                    const isMe = msg.user_id === user?.id;
-                    const isSystem = msg.message_type === 'system';
-                    if (isSystem) return (<div key={i} className="flex justify-center my-3"><div className="px-4 py-2 bg-blue-100/20 dark:bg-blue-500/10 border border-blue-500/10 rounded-xl text-[9px] font-black text-blue-600 tracking-tight shadow-sm backdrop-blur-sm uppercase">Log: {msg.content}</div></div>);
-                    return (
-                        <div key={i} className={`flex items-start gap-2.5 ${isMe ? 'flex-row-reverse' : ''} animate-slide-up`}>
-                            <div className={`w-8 h-8 rounded-lg bg-indigo-500 shadow-md flex-shrink-0 flex items-center justify-center text-[10px] font-black text-white ${isMe ? 'rounded-tr-none' : 'rounded-tl-none'}`}>{msg.user_name[0]}</div>
-                            <div className={`max-w-[75%] ${isMe ? 'items-end' : ''} flex flex-col`}>
-                                <div className="text-[8px] text-gray-400 font-black uppercase tracking-tight mb-1 px-1">{msg.user_name}</div>
-                                <div className={`p-3 px-5 rounded-[18px] text-[12px] leading-relaxed shadow-lg ${isMe ? 'bg-indigo-600 text-white rounded-tr-none shadow-indigo-600/10' : 'bg-white dark:bg-[#12141D] text-gray-700 dark:text-gray-200 rounded-tl-none border border-gray-100 dark:border-white/5'}`}>
-                                    {msg.content}
-                                    <div className={`text-[8px] mt-1.5 text-right font-black opacity-60 ${isMe ? 'text-indigo-200' : 'text-gray-400'}`}>{new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
-                                </div>
-                            </div>
-                        </div>
-                    );
-                })}
+             <div className="flex-1 overflow-y-auto px-6 py-6 space-y-2 z-0 custom-scrollbar scroll-smooth pb-28">
+                {(() => {
+                   let lastDate = '';
+                   const msgs = messages.filter(m => m.message_type !== 'subtask');
+                   
+                   return msgs.map((msg, i) => {
+                      const dateObj = new Date(msg.created_at);
+                      const formattedDate = dateObj.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+                      let showDateSeparator = false;
+                      
+                      if (formattedDate !== lastDate) {
+                         showDateSeparator = true;
+                         lastDate = formattedDate;
+                      }
+
+                      const isMe = msg.user_id === user?.id;
+                      const isSystem = msg.message_type === 'system';
+
+                      return (
+                         <React.Fragment key={i}>
+                            {/* Date Separator Pill like Screenshot */}
+                            {showDateSeparator && (
+                               <div className="flex justify-center my-6 animate-fade-in">
+                                  <div className="px-4 py-1.5 bg-black/15 dark:bg-white/10 backdrop-blur-md rounded-full text-[11px] font-medium text-gray-700 dark:text-gray-200 shadow-sm border border-white/10">
+                                     {formattedDate}
+                                  </div>
+                               </div>
+                            )}
+
+                            {/* System Event Notification Box (exactly like screenshot layout) */}
+                            {isSystem ? (
+                               <div className="flex justify-start my-1.5 animate-slide-up max-w-3xl">
+                                  <div className="relative px-4 py-3 bg-white/20 dark:bg-white/5 backdrop-blur-sm border border-white/30 dark:border-white/10 rounded-xl w-full shadow-sm text-[12px] flex flex-col items-start group overflow-hidden">
+                                     <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-blue-400/50"></div>
+                                     <div className="flex items-center justify-between w-full">
+                                        <p className="text-gray-800 dark:text-gray-100 leading-snug font-medium">
+                                           <span className="text-blue-700 dark:text-blue-300 font-bold underline cursor-pointer hover:no-underline mr-1">{msg.user_name}</span> 
+                                           {msg.content}
+                                        </p>
+                                        <span className="text-[9px] text-gray-600 dark:text-gray-400 font-medium whitespace-nowrap ml-3">
+                                           {dateObj.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true }).toLowerCase()}
+                                        </span>
+                                     </div>
+                                  </div>
+                               </div>
+                            ) : (
+                               /* Regular Chat Bubble with modern style */
+                               <div className={`flex items-start gap-2.5 mb-2 ${isMe ? 'flex-row-reverse' : ''} animate-slide-up`}>
+                                   {/* User Avatar */}
+                                   <div className={`w-8 h-8 rounded-full ${isMe ? 'bg-indigo-600' : 'bg-slate-300 dark:bg-slate-700'} flex-shrink-0 flex items-center justify-center text-[12px] font-bold text-white border border-white shadow-sm`}>
+                                      {msg.user_name[0]}
+                                   </div>
+                                   <div className={`max-w-[70%] flex flex-col ${isMe ? 'items-end' : 'items-start'} group relative`}>
+                                       {!isMe && <div className="text-[11px] text-gray-700 dark:text-gray-300 font-bold tracking-tight px-1 mb-0.5">{msg.user_name}</div>}
+                                       <div className={`p-3 px-4 rounded-2xl text-[13px] leading-relaxed shadow-md transition-transform active:scale-[0.99] ${isMe ? 'bg-[#4a76a8] text-white rounded-tr-none' : 'bg-white dark:bg-[#1A1C23] text-gray-800 dark:text-gray-200 rounded-tl-none'}`}>
+                                           {msg.content}
+                                           <div className={`text-[9px] mt-1 flex justify-end font-medium opacity-70 gap-1`}>
+                                              {dateObj.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true }).toLowerCase()}
+                                              {isMe && <span>✓✓</span>}
+                                           </div>
+                                       </div>
+
+                                       {/* Action buttons float */}
+                                       <div className={`absolute top-1/2 -translate-y-1/2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-10 ${isMe ? 'right-full mr-2' : 'left-full ml-2'}`}>
+                                           {(isMe || user?.role === 'admin') && (
+                                              <button onClick={() => handleDeleteMessage(msg.id)} className="p-1.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-white/10 text-gray-400 hover:text-red-500 rounded-lg shadow-sm" title="Delete">
+                                                 <FiTrash2 size={12}/>
+                                              </button>
+                                           )}
+                                           <button onClick={() => handleForwardMessage(msg.content)} className="p-1.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-white/10 text-gray-400 hover:text-emerald-500 rounded-lg shadow-sm" title="Forward">
+                                              <FiCornerUpRight size={12}/>
+                                           </button>
+                                       </div>
+                                   </div>
+                               </div>
+                            )}
+                         </React.Fragment>
+                      );
+                   });
+                })()}
                 <div ref={chatEndRef} />
              </div>
-             <div className="absolute bottom-5 inset-x-6 z-[100]">
-                <form onSubmit={handleSendMessage} className="bg-white dark:bg-dark-card rounded-[18px] border border-gray-200 dark:border-white/10 shadow-2xl p-1.5 flex items-end gap-1.5 transition-all ring-4 ring-indigo-500/5 group">
-                    <button type="button" className="p-2.5 text-gray-300 hover:text-indigo-500 mt-1"><FiPaperclip size={16}/></button>
-                    <textarea value={newMessage} onChange={(e) => setNewMessage(e.target.value)} placeholder="Message..." rows={1}
-                        className="flex-1 py-3 bg-transparent outline-none text-[12px] font-medium text-gray-700 dark:text-gray-200 placeholder:text-gray-300 resize-none max-h-24 custom-scrollbar" />
-                    <div className="flex items-center gap-1 p-0.5 mt-1">
-                        <button type="submit" className="p-2.5 bg-indigo-600 text-white rounded-xl shadow-xl shadow-indigo-500/20 hover:scale-110 active:scale-95 transition-all"><FiSend size={16}/></button>
+
+             {/* Clean Floating Input Box like Reference */}
+             <div className="absolute bottom-4 inset-x-6 z-50">
+                <form onSubmit={handleSendMessage} className="bg-white dark:bg-[#1A1C23] rounded-2xl shadow-xl p-1.5 flex items-center gap-1 border border-gray-100 dark:border-white/10 transition-shadow focus-within:shadow-2xl">
+                    <button type="button" className="p-2.5 text-gray-400 hover:text-gray-600 dark:hover:text-white transition-colors rounded-xl"><FiPaperclip size={18}/></button>
+                    <input 
+                        type="text"
+                        value={newMessage} 
+                        onChange={(e) => setNewMessage(e.target.value)} 
+                        placeholder="Type @ or + to mention a person, a chat or AI..." 
+                        className="flex-1 px-3 py-3 bg-transparent outline-none text-[14px] font-medium text-gray-800 dark:text-gray-100 placeholder:text-gray-400" 
+                    />
+                    <div className="flex items-center gap-1 pr-1">
+                        <button type="button" className="p-2 text-gray-400 hover:text-gray-600 rounded-xl transition-colors hidden sm:block"><FiSmile size={18}/></button>
+                        <button type="button" className="p-2 text-gray-400 hover:text-gray-600 rounded-xl transition-colors hidden sm:block"><FiMic size={18}/></button>
+                        <button type="submit" disabled={!newMessage.trim()} className={`p-3 ${newMessage.trim() ? 'bg-blue-500 text-white shadow-lg' : 'bg-gray-100 text-gray-300'} rounded-xl transition-all active:scale-95`}>
+                           <FiSend size={16} />
+                        </button>
                     </div>
                 </form>
              </div>

@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import { useAuth } from '../utils/AuthContext';
-import { dashboardAPI, clientAPI, taskAPI, salaryAPI, announcementAPI, rewardsAPI } from '../utils/api';
-import { FiUsers, FiCheckCircle, FiAlertCircle, FiGrid, FiEye, FiDollarSign, FiAward, FiTrendingUp } from 'react-icons/fi';
+import { dashboardAPI, clientAPI, taskAPI, salaryAPI, announcementAPI, rewardsAPI, attendanceAPI } from '../utils/api';
+import { FiUsers, FiCheckCircle, FiAlertCircle, FiGrid, FiEye, FiDollarSign, FiAward, FiTrendingUp, FiClock, FiLogIn, FiLogOut } from 'react-icons/fi';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import GlowCard from '../components/GlowCard';
 
@@ -65,6 +65,14 @@ export default function DashboardPage() {
   const [announcements, setAnnouncements] = useState<any[]>([]);
   const [rewards, setRewards] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [attendance, setAttendance] = useState<any>(null);
+
+  const fetchAttendance = async () => {
+    try {
+      const res = await attendanceAPI.getToday();
+      setAttendance(res.data?.attendance || null);
+    } catch (err) {}
+  };
 
   useEffect(() => {
     if (!user) return;
@@ -101,12 +109,77 @@ export default function DashboardPage() {
         // Fetch rewards (Gold Coins) for all users
         const rewRes = await rewardsAPI.getStats().catch(() => null);
         if (rewRes?.data) setRewards(rewRes.data);
+
+        await fetchAttendance();
       } catch (err) { 
         console.error("Dashboard Load Error:", err); 
       }
       setLoading(false);
     })();
   }, [user]);
+
+  const handleCheckInOut = async () => {
+    try {
+      if (attendance?.check_in_time && !attendance?.check_out_time) {
+        await attendanceAPI.checkOut();
+      } else {
+        await attendanceAPI.checkIn();
+      }
+      fetchAttendance();
+    } catch (err) {
+      alert('Failed to process check-in/out action.');
+    }
+  };
+
+  const AttendanceWidget = () => {
+    if (user?.role === 'client') return null;
+    const isCheckedIn = !!attendance?.check_in_time && !attendance?.check_out_time;
+    const isCheckedOut = !!attendance?.check_out_time;
+    
+    return (
+      <div className="bg-white dark:bg-[#1A1C23] px-6 py-3 rounded-2xl shadow-lg shadow-black/5 border border-gray-100 dark:border-white/5 flex flex-wrap items-center justify-between gap-4 animate-fade-in w-full">
+         <div className="flex items-center gap-3">
+            <div className={`w-10 h-10 rounded-full flex items-center justify-center ${isCheckedIn ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-500' : 'bg-slate-100 dark:bg-white/5 text-gray-500'}`}>
+               <FiClock size={20} className={isCheckedIn ? 'animate-pulse' : ''}/>
+            </div>
+            <div>
+               <p className="text-[10px] uppercase font-black tracking-widest text-gray-400">Work Shift Status</p>
+               <p className="text-sm font-bold text-gray-800 dark:text-white flex items-center gap-2">
+                  {isCheckedIn ? (
+                    <>Checked In <span className="text-[10px] px-1.5 bg-emerald-500/10 text-emerald-500 rounded border border-emerald-500/20">LIVE</span></>
+                  ) : isCheckedOut ? (
+                    <>Shift Ended</>
+                  ) : (
+                    <>Not Active</>
+                  )}
+               </p>
+            </div>
+         </div>
+         
+         <div className="flex items-center gap-3">
+            {isCheckedIn && attendance?.check_in_time && (
+               <div className="text-right">
+                  <p className="text-[9px] uppercase text-gray-400 tracking-widest font-bold">Started At</p>
+                  <p className="text-xs font-black dark:text-gray-200">
+                    {new Date(attendance.check_in_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  </p>
+               </div>
+            )}
+            <button 
+               onClick={handleCheckInOut}
+               className={`px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest flex items-center gap-2 shadow-md transition-all active:scale-95 ${
+                 isCheckedIn 
+                   ? 'bg-rose-500 hover:bg-rose-600 text-white shadow-rose-500/20' 
+                   : 'bg-[#6366F1] hover:bg-[#4F46E5] text-white shadow-indigo-500/20'
+               }`}
+            >
+               {isCheckedIn ? <FiLogOut size={14}/> : <FiLogIn size={14}/>}
+               {isCheckedIn ? 'Finish Shift' : isCheckedOut ? 'Start Again' : 'Clock In'}
+            </button>
+         </div>
+      </div>
+    );
+  };
 
   if (loading) return (
     <div className="flex items-center justify-center py-32">
@@ -121,9 +194,14 @@ export default function DashboardPage() {
   /* ── Admin / Marketing Head ── */
   if (user?.role === 'admin' || user?.role === 'marketing_head') return (
     <div className="p-6 space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold dark:text-white uppercase tracking-tight">Admin Dashboard</h1>
-        <p className="text-gray-500 text-xs mt-1">Hello, {user.name}</p>
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div>
+          <h1 className="text-2xl font-bold dark:text-white uppercase tracking-tight">Admin Dashboard</h1>
+          <p className="text-gray-500 text-xs mt-1">Hello, {user.name}</p>
+        </div>
+        <div className="w-full md:w-auto max-w-md">
+          <AttendanceWidget />
+        </div>
       </div>
 
       {/* Big stat cards */}
@@ -238,9 +316,14 @@ export default function DashboardPage() {
   /* ── Team Lead / CRM ── */
   if (user?.role === 'team_lead' || user?.role === 'crm_head') return (
     <div className="p-6 space-y-6">
-      <div>
-        <h1 className="text-3xl font-black text-shimmer">Team Dashboard</h1>
-        <p className="text-gray-500 text-sm mt-1">Welcome back, {user.name}</p>
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div>
+          <h1 className="text-3xl font-black text-shimmer">Team Dashboard</h1>
+          <p className="text-gray-500 text-sm mt-1">Welcome back, {user.name}</p>
+        </div>
+        <div className="w-full md:w-auto max-w-md">
+          <AttendanceWidget />
+        </div>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
@@ -339,9 +422,14 @@ export default function DashboardPage() {
   /* ── Employee ── */
   return (
     <div className="p-6 space-y-6">
-      <div>
-        <h1 className="text-3xl font-black text-shimmer">My Dashboard</h1>
-        <p className="text-gray-500 text-sm mt-1">Welcome back, {user?.name}</p>
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div>
+          <h1 className="text-3xl font-black text-shimmer">My Dashboard</h1>
+          <p className="text-gray-500 text-sm mt-1">Welcome back, {user?.name}</p>
+        </div>
+        <div className="w-full md:w-auto max-w-md">
+          <AttendanceWidget />
+        </div>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-6 gap-4">

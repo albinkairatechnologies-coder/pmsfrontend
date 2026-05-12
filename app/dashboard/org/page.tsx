@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { orgAPI, authAPI } from '../../utils/api';
-import { FiPlus, FiTrash2, FiUsers, FiGrid, FiChevronDown, FiChevronRight, FiEdit2, FiX, FiCheck } from 'react-icons/fi';
+import { FiPlus, FiTrash2, FiUsers, FiGrid, FiChevronDown, FiChevronRight, FiEdit2, FiX, FiCheck, FiEye, FiEyeOff } from 'react-icons/fi';
 
 export default function OrgPage() {
   const [teams, setTeams] = useState<any[]>([]);
@@ -17,6 +17,8 @@ export default function OrgPage() {
   const [showDeptModal, setShowDeptModal] = useState(false);
   const [showMemberModal, setShowMemberModal] = useState(false);
   const [editingMemberId, setEditingMemberId] = useState<number | null>(null);
+
+  const [showPassword, setShowPassword] = useState(false);
 
   const [teamForm, setTeamForm] = useState({ name: '', description: '' });
   const [deptForm, setDeptForm] = useState({ name: '', team_id: '', description: '' });
@@ -68,10 +70,17 @@ export default function OrgPage() {
     try {
       if (editingMemberId) {
         const updateData: any = {
+          name:          memberForm.name,
+          email:         memberForm.email,
+          phone:         memberForm.phone,
           role:          memberForm.role,
           team_id:       parseInt(memberForm.team_id)       || null,
           department_id: parseInt(memberForm.department_id) || null,
+          manager_id:    parseInt(memberForm.manager_id)    || null
         };
+        if (memberForm.password) {
+          updateData.password = memberForm.password;
+        }
         await authAPI.updateUser(editingMemberId, updateData);
       } else {
         await orgAPI.createMember({ ...memberForm, password: memberForm.password || 'password123' });
@@ -80,9 +89,9 @@ export default function OrgPage() {
       setEditingMemberId(null);
       setMemberForm({ name: '', email: '', password: '', role: 'employee', phone: '', team_id: '', department_id: '', manager_id: '' });
       loadAll();
-    } catch (err) {
+    } catch (err: any) {
       console.error('Failed to save member', err);
-      alert('Error saving member. Check if email already exists.');
+      alert(err?.response?.data?.error || 'Error saving member. Check if email already exists.');
     }
   };
 
@@ -98,6 +107,7 @@ export default function OrgPage() {
       department_id: member.department_id?.toString() || '',
       manager_id: member.manager_id?.toString() || ''
     });
+    setShowPassword(false);
     setShowMemberModal(true);
   };
 
@@ -179,12 +189,19 @@ export default function OrgPage() {
                        <p className="text-[10px] font-black uppercase tracking-[0.3em] text-gray-400">Team Leadership</p>
                        <div className="flex flex-wrap gap-3">
                           {team.leads?.map((lead: any) => (
-                              <div key={lead.id} className="flex items-center gap-4 py-3 px-5 bg-primary-500/5 dark:bg-gold-500/5 border border-primary-500/10 dark:border-gold-500/10 rounded-2xl">
+                              <div key={lead.id} className="flex items-center gap-4 py-3 px-5 bg-primary-500/5 dark:bg-gold-500/5 border border-primary-500/10 dark:border-gold-500/10 rounded-2xl group/lead">
                                 <span className="text-xl">👑</span>
-                                <div className="min-w-0">
+                                <div className="min-w-0 flex-1">
                                    <p className="font-bold text-sm text-gray-900 dark:text-white capitalize leading-none mb-1">{lead.name}</p>
                                    <p className={`text-[9px] font-black uppercase tracking-widest text-primary-500 dark:text-gold-500`}>{lead.role?.replace('_', ' ')}</p>
                                 </div>
+                                <button
+                                  onClick={() => startEditMember(lead)}
+                                  className="opacity-0 group-hover/lead:opacity-100 p-2 bg-primary-500/10 text-primary-500 hover:bg-primary-500 hover:text-white rounded-xl transition-all flex-shrink-0"
+                                  title="Edit member"
+                                >
+                                  <FiEdit2 size={14} />
+                                </button>
                               </div>
                           ))}
                        </div>
@@ -201,12 +218,19 @@ export default function OrgPage() {
                     
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                       {dept.leads?.map((lead: any) => (
-                          <div key={lead.id} className="flex items-center gap-4 p-4 bg-white dark:bg-white/3 rounded-2xl border border-gray-100 dark:border-white/5 shadow-sm">
+                          <div key={lead.id} className="flex items-center gap-4 p-4 bg-white dark:bg-white/3 rounded-2xl border border-gray-100 dark:border-white/5 shadow-sm group/dlead">
                             <div className="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-500">👑</div>
                             <div className="min-w-0 flex-1">
                                 <p className="text-sm font-bold truncate text-gray-900 dark:text-white">{lead.name}</p>
                                 <p className="text-[9px] font-black uppercase text-purple-500 tracking-tighter">{lead.role?.replace('_', ' ')}</p>
                             </div>
+                            <button
+                              onClick={() => startEditMember(lead)}
+                              className="opacity-0 group-hover/dlead:opacity-100 p-2 bg-primary-500/10 text-primary-500 hover:bg-primary-500 hover:text-white rounded-xl transition-all flex-shrink-0"
+                              title="Edit member"
+                            >
+                              <FiEdit2 size={14} />
+                            </button>
                           </div>
                       ))}
                       {dept.members?.map((member: any) => (
@@ -218,6 +242,13 @@ export default function OrgPage() {
                                 <p className="text-sm font-bold truncate text-gray-900 dark:text-white">{member.name}</p>
                                 <p className="text-[9px] font-black uppercase text-gray-400 tracking-tighter">{member.role?.replace('_', ' ')}</p>
                             </div>
+                            <button
+                              onClick={() => startEditMember(member)}
+                              className="opacity-0 group-hover/mem:opacity-100 p-2 bg-primary-500/10 text-primary-500 hover:bg-primary-500 hover:text-white rounded-xl transition-all flex-shrink-0"
+                              title="Edit member"
+                            >
+                              <FiEdit2 size={14} />
+                            </button>
                           </div>
                       ))}
                     </div>
@@ -377,22 +408,36 @@ export default function OrgPage() {
       {showMemberModal && (
         <Modal title={editingMemberId ? "Edit Staff Access" : "Induct New Member"} onClose={() => setShowMemberModal(false)}>
           <form onSubmit={handleSubmitMember} className="p-8 space-y-8">
-            {!editingMemberId && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 dark:text-gray-500 ml-2 block">Legal Full Name</label>
-                  <input value={memberForm.name} onChange={e => setMemberForm({ ...memberForm, name: e.target.value })} className="input-premium-lux" required />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 dark:text-gray-500 ml-2 block">Corporate Email</label>
-                  <input type="email" value={memberForm.email} onChange={e => setMemberForm({ ...memberForm, email: e.target.value })} className="input-premium-lux" required />
-                </div>
-                <div className="space-y-2 sm:col-span-2">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 dark:text-gray-500 ml-2 block">Access Password</label>
-                  <input type="password" value={memberForm.password} onChange={e => setMemberForm({ ...memberForm, password: e.target.value })} className="input-premium-lux" required placeholder="Set initial password" />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
+              <div className="space-y-2">
+                <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 dark:text-gray-500 ml-2 block">Legal Full Name</label>
+                <input value={memberForm.name} onChange={e => setMemberForm({ ...memberForm, name: e.target.value })} className="input-premium-lux" required />
+              </div>
+              <div className="space-y-2">
+                <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 dark:text-gray-500 ml-2 block">Corporate Email</label>
+                <input type="email" value={memberForm.email} onChange={e => setMemberForm({ ...memberForm, email: e.target.value })} className="input-premium-lux" required />
+              </div>
+              <div className="space-y-2 sm:col-span-2 relative">
+                <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 dark:text-gray-500 ml-2 block">Access Password</label>
+                <div className="relative">
+                  <input 
+                    type={showPassword ? "text" : "password"} 
+                    value={memberForm.password} 
+                    onChange={e => setMemberForm({ ...memberForm, password: e.target.value })} 
+                    className="input-premium-lux pr-12" 
+                    required={!editingMemberId} 
+                    placeholder={editingMemberId ? "Leave blank to keep current password" : "Set initial password"} 
+                  />
+                  <button 
+                    type="button" 
+                    onClick={() => setShowPassword(!showPassword)} 
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-primary-500 transition-colors"
+                  >
+                    {showPassword ? <FiEyeOff size={20} /> : <FiEye size={20} />}
+                  </button>
                 </div>
               </div>
-            )}
+            </div>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-8">
               <div className="space-y-2">
                 <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 dark:text-gray-500 ml-2 block">Official Role</label>

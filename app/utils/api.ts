@@ -128,6 +128,7 @@ export const taskAPI = {
   addObserver: (id: number, user_id: number) => api.post(`/tasks/${id}/observers`, { user_id }),
   removeParticipant: (id: number, userId: number) => api.delete(`/tasks/${id}/participants/${userId}`),
   removeObserver: (id: number, userId: number) => api.delete(`/tasks/${id}/observers/${userId}`),
+  deleteMessage: (taskId: number, msgId: number) => api.delete(`/tasks/${taskId}/messages/delete/${msgId}`),
 };
 
 export const orgAPI = {
@@ -305,6 +306,7 @@ export const messageAPI = {
   getDownloadUrl: (filename: string) => `${API_URL}/messages/attachments/${filename}`,
   editMessage: (messageId: number, content: string) => 
     api.put(`/messages/${messageId}`, { content }),
+  deleteMessage: (messageId: number) => api.delete(`/messages/delete/${messageId}`),
 };
 
 export const documentAPI = {
@@ -324,8 +326,11 @@ export const announcementAPI = {
   addComment:  (id: number, content: string) => api.post(`/announcements/${id}/comments`, { content }),
   toggleLike:  (id: number) => api.post(`/announcements/${id}/like`),
   recordView:  (id: number) => api.post(`/announcements/${id}/view`),
+  getViewers:  (id: number) => api.get(`/announcements/${id}/viewers`),
   togglePin:   (id: number) => api.post(`/announcements/${id}/pin`),
   votePoll:    (id: number, optionIndex: number) => api.post(`/announcements/${id}/vote`, { option_index: optionIndex }),
+  deleteComment: (commentId: number) => api.delete(`/comments/${commentId}`),
+  updateComment: (commentId: number, content: string) => api.put(`/comments/${commentId}`, { content }),
 };
 
 export const calendarAPI = {

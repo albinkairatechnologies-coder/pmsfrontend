@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../../utils/AuthContext';
 import { messageAPI } from '../../utils/api';
-import { FiSend, FiSearch, FiMoreVertical, FiPaperclip, FiSmile, FiCheck, FiArrowLeft, FiUser, FiMessageSquare, FiShield, FiClock, FiDownload, FiFile, FiImage, FiX, FiEdit2, FiPlus, FiUsers } from 'react-icons/fi';
+import { FiSend, FiSearch, FiMoreVertical, FiPaperclip, FiSmile, FiCheck, FiArrowLeft, FiUser, FiMessageSquare, FiShield, FiClock, FiDownload, FiFile, FiImage, FiX, FiEdit2, FiPlus, FiUsers, FiTrash2, FiCornerUpRight } from 'react-icons/fi';
 import GlowCard from '../../components/GlowCard';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
@@ -156,6 +156,23 @@ export default function ChatPage() {
   const cancelEditing = () => {
     setEditingMessage(null);
     setNewMessage('');
+  };
+
+  const handleDeleteMessage = async (msgId: number) => {
+    if (!confirm('Are you sure you want to delete this message?')) return;
+    try {
+      await messageAPI.deleteMessage(msgId);
+      setMessages(prev => prev.filter(m => m.id !== msgId));
+      fetchContacts();
+    } catch (err) {
+      console.error('Failed to delete', err);
+    }
+  };
+
+  const handleForwardMessage = (content: string) => {
+    if (!content) return;
+    setNewMessage(`[Forwarded]: ${content}`);
+    alert('Message copied to your composer for forwarding.');
   };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -452,15 +469,33 @@ export default function ChatPage() {
                                 : 'bg-white dark:bg-white/10 dark:text-white rounded-tl-none border border-gray-100 dark:border-white/5'
                             } ${editingMessage?.id === msg.id ? 'ring-4 ring-primary-500/20 dark:ring-gold-500/20' : ''}`}>
                               
-                              {isOwn && !msg.file_url && (
+                              <div className={`absolute ${isOwn ? '-left-24' : '-right-24'} top-1/2 -translate-y-1/2 flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-all duration-200 z-10`}>
+                                {isOwn && !msg.file_url && (
+                                  <button 
+                                    onClick={() => startEditing(msg)}
+                                    className="p-1.5 text-gray-400 hover:text-primary-500 dark:hover:text-gold-500 bg-white dark:bg-surface-dark shadow-sm rounded-lg border border-gray-100 dark:border-white/5"
+                                    title="Edit message"
+                                  >
+                                    <FiEdit2 size={14} />
+                                  </button>
+                                )}
+                                {(isOwn || user?.role === 'admin') && (
+                                  <button 
+                                    onClick={() => handleDeleteMessage(msg.id)}
+                                    className="p-1.5 text-gray-400 hover:text-red-500 bg-white dark:bg-surface-dark shadow-sm rounded-lg border border-gray-100 dark:border-white/5"
+                                    title="Delete message"
+                                  >
+                                    <FiTrash2 size={14} />
+                                  </button>
+                                )}
                                 <button 
-                                  onClick={() => startEditing(msg)}
-                                  className={`absolute ${isOwn ? '-left-10' : '-right-10'} top-1/2 -translate-y-1/2 p-2 text-gray-400 hover:text-primary-500 dark:hover:text-gold-500 opacity-0 group-hover:opacity-100 transition-all active:scale-95`}
-                                  title="Edit message"
+                                  onClick={() => handleForwardMessage(msg.content)}
+                                  className="p-1.5 text-gray-400 hover:text-emerald-500 bg-white dark:bg-surface-dark shadow-sm rounded-lg border border-gray-100 dark:border-white/5"
+                                  title="Forward message"
                                 >
-                                  <FiEdit2 size={16} />
+                                  <FiCornerUpRight size={14} />
                                 </button>
-                              )}
+                              </div>
 
                               {msg.file_url ? (
                                 <div className="flex flex-col gap-2">
