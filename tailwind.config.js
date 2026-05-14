@@ -9,7 +9,7 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        primary: { DEFAULT: '#6366F1', 50: '#EEF2FF', 100: '#E0E7FF', 500: '#6366F1', 600: '#4F46E5', 700: '#4338CA' },
+        primary: { DEFAULT: '#6366F1', 50: '#EEF2FF', 100: '#E0E7FF', 400: '#818CF8', 500: '#6366F1', 600: '#4F46E5', 700: '#4338CA' },
         secondary: { DEFAULT: '#8B5CF6', 500: '#8B5CF6', 600: '#7C3AED' },
         accent: { DEFAULT: '#06B6D4', 500: '#06B6D4', 600: '#0891B2' },
         gold: { DEFAULT: '#F5C842', 300: '#FDE68A', 400: '#FBBF24', 500: '#F5C842', 600: '#D97706' },

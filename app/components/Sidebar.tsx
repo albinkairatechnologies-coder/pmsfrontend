@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { FiHome, FiUsers, FiCheckSquare, FiClock, FiBarChart2, FiLogOut, FiMoon, FiSun, FiGrid, FiSettings, FiCalendar, FiActivity, FiUmbrella, FiShield, FiMessageSquare, FiPieChart, FiChevronDown, FiChevronRight, FiDollarSign, FiUser, FiGlobe, FiFolder, FiTrendingUp, FiHardDrive, FiX } from 'react-icons/fi';
+import { FiHome, FiUsers, FiCheckSquare, FiClock, FiBarChart2, FiLogOut, FiMoon, FiSun, FiGrid, FiSettings, FiCalendar, FiActivity, FiUmbrella, FiShield, FiMessageSquare, FiPieChart, FiChevronDown, FiChevronRight, FiDollarSign, FiUser, FiGlobe, FiFolder, FiTrendingUp, FiHardDrive, FiX, FiFileText } from 'react-icons/fi';
 import { useAuth } from '../utils/AuthContext';
 import { useState, useEffect } from 'react';
 import { domainAPI } from '../utils/api';
@@ -51,6 +51,7 @@ export default function Sidebar({ isOpen, setIsOpen }: { isOpen: boolean, setIsO
       ]
     },
     { href: '/dashboard/clients', icon: FiUsers, label: 'Clients', roles: ['admin', 'crm_head', 'marketing_head', 'team_lead'] },
+    { href: '/dashboard/invoices', icon: FiFileText, label: 'Invoices', roles: ['admin', 'crm_head', 'marketing_head', 'team_lead'] },
     { href: '/dashboard/documents', icon: FiFolder, label: 'Documents', roles: ['admin', 'marketing_head', 'developer', 'smm', 'crm_head', 'team_lead', 'employee'] },
     { href: '/dashboard/domains', icon: FiGlobe, label: 'Domains', roles: ['admin', 'crm_head', 'marketing_head', 'team_lead'], alert: domainAlertCount },
     { href: '/dashboard/eod', icon: FiClock, label: 'EOD Report', roles: ['admin', 'marketing_head', 'developer', 'smm', 'crm_head', 'team_lead', 'employee'] },

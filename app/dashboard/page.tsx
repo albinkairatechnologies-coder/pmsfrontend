@@ -66,6 +66,7 @@ export default function DashboardPage() {
   const [rewards, setRewards] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [attendance, setAttendance] = useState<any>(null);
+  const [showImage, setShowImage] = useState<string | null>(null);
 
   const fetchAttendance = async () => {
     try {
@@ -121,13 +122,17 @@ export default function DashboardPage() {
   const handleCheckInOut = async () => {
     try {
       if (attendance?.check_in_time && !attendance?.check_out_time) {
+        if (!confirm('Confirm check-out?')) return;
         await attendanceAPI.checkOut();
+        setShowImage('/chechout.jpg');
       } else {
         await attendanceAPI.checkIn();
+        setShowImage('/morningatt.gif');
       }
       fetchAttendance();
-    } catch (err) {
-      alert('Failed to process check-in/out action.');
+      setTimeout(() => setShowImage(null), 3500);
+    } catch (err: any) {
+      alert(err.response?.data?.error || 'Failed to process check-in/out action.');
     }
   };
 
@@ -194,6 +199,11 @@ export default function DashboardPage() {
   /* ── Admin / Marketing Head ── */
   if (user?.role === 'admin' || user?.role === 'marketing_head') return (
     <div className="p-6 space-y-6">
+      {showImage && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm animate-fade-in" onClick={() => setShowImage(null)}>
+          <img src={showImage} alt="Attendance Status" className="max-w-[90vw] max-h-[80vh] rounded-2xl shadow-2xl animate-zoom-in object-contain" />
+        </div>
+      )}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h1 className="text-2xl font-bold dark:text-white uppercase tracking-tight">Admin Dashboard</h1>
@@ -316,6 +326,11 @@ export default function DashboardPage() {
   /* ── Team Lead / CRM ── */
   if (user?.role === 'team_lead' || user?.role === 'crm_head') return (
     <div className="p-6 space-y-6">
+      {showImage && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm animate-fade-in" onClick={() => setShowImage(null)}>
+          <img src={showImage} alt="Attendance Status" className="max-w-[90vw] max-h-[80vh] rounded-2xl shadow-2xl animate-zoom-in object-contain" />
+        </div>
+      )}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h1 className="text-3xl font-black text-shimmer">Team Dashboard</h1>
@@ -422,6 +437,11 @@ export default function DashboardPage() {
   /* ── Employee ── */
   return (
     <div className="p-6 space-y-6">
+      {showImage && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm animate-fade-in" onClick={() => setShowImage(null)}>
+          <img src={showImage} alt="Attendance Status" className="max-w-[90vw] max-h-[80vh] rounded-2xl shadow-2xl animate-zoom-in object-contain" />
+        </div>
+      )}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h1 className="text-3xl font-black text-shimmer">My Dashboard</h1>

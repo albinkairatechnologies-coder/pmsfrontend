@@ -136,7 +136,7 @@ export default function FeedbackPage() {
       <div className="tab-bar">
         {tabs.map(({ key, label, icon: Icon }) => (
           <button key={key} onClick={() => setTab(key as any)}
-            className={`tab-item ${tab === key ? 'tab-active' : ''}`}>
+            className={tab === key ? 'tab-item-active flex items-center gap-2' : 'tab-item-inactive flex items-center gap-2'}>
             <Icon size={14} /> {label}
           </button>
         ))}

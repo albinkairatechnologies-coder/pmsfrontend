@@ -217,6 +217,7 @@ export const companyAPI = {
 
 export const analyticsAPI = {
   getHR: (params?: { start?: string; end?: string }) => api.get('/analytics/hr', { params }),
+  getMarketing: () => api.get('/analytics/marketing'),
 };
 
 export const proposalAPI = {
@@ -396,6 +397,22 @@ export const adminChatAPI = {
   getMessages:  () => api.get('/admin/chat/messages'),
   sendMessage:  (message: string) => api.post('/admin/chat/send', { message }),
   getUnread:    () => api.get('/admin/chat/unread'),
+};
+
+export const campaignAPI = {
+  getAll:   () => api.get('/campaigns'),
+  create:   (data: any) => api.post('/campaigns', data),
+  update:   (id: number, data: any) => api.put(`/campaigns/${id}`, data),
+  delete:   (id: number) => api.delete(`/campaigns/${id}`),
+  getStats: () => api.get('/campaigns/stats'),
+};
+
+export const expenseAPI = {
+  getAll:     (params?: any) => api.get('/expenses', { params }),
+  create:     (data: any) => api.post('/expenses', data),
+  getStats:   () => api.get('/expenses/stats'),
+  getMonthly: () => api.get('/expenses/monthly-summary'),
+  delete:     (id: number) => api.delete(`/expenses/${id}`),
 };
 
 export default api;
