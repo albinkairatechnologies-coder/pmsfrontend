@@ -268,7 +268,7 @@ export default function TaskDetailPage() {
         {/* Task Main Info Card */}
         <div className="px-5 pb-5 border-b border-gray-100 dark:border-white/5">
             <div className="flex justify-between items-start gap-3 mb-3">
-                <h1 className="text-lg font-black text-gray-900 dark:text-white leading-tight tracking-tight">{task.title}</h1>
+                <h1 className="text-2xl md:text-3xl font-black text-gray-900 dark:text-white leading-tight tracking-tight">{task.title}</h1>
                 <button className="p-2 text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5 rounded-full transition-colors"><FiMoreHorizontal size={18}/></button>
             </div>
             <p className="text-[12px] text-gray-500 dark:text-gray-400 leading-relaxed bg-gray-50 dark:bg-white/5 p-3 rounded-xl border border-gray-100 dark:border-white/5">

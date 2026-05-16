@@ -35,7 +35,7 @@ export default function CompanySettingsPage() {
 
   return (
     <div>
-      <h1 className="text-3xl font-bold text-gray-800 dark:text-white mb-8">Company Settings</h1>
+      <h1 className="text-2xl md:text-3xl font-black text-gray-800 dark:text-white mb-8">Company Settings</h1>
       <div className="card max-w-2xl">
         <h2 className="text-lg font-semibold mb-6">Letterhead Configuration</h2>
         <p className="text-sm text-gray-500 mb-6">

@@ -130,7 +130,7 @@ export default function DomainsPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+          <h1 className="text-2xl md:text-3xl font-black text-gray-900 dark:text-white flex items-center gap-2">
             <FiGlobe className="text-primary-500" /> Domain Management
           </h1>
           <p className="text-gray-500 text-sm mt-0.5">Track domain renewals and expiration dates</p>

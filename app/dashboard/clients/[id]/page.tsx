@@ -148,7 +148,7 @@ export default function ClientProfilePage() {
             <FiArrowLeft size={18} />
           </button>
           <div>
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+            <h1 className="text-2xl md:text-3xl font-black text-gray-900 dark:text-white">
               {client?.company_name || 'Client'} — Profiles
             </h1>
             <p className="text-sm text-gray-400">{profiles.length} profile(s)</p>

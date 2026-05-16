@@ -36,11 +36,12 @@ export default function InvoicesPage() {
     client_id: '',
     invoice_date: new Date().toISOString().split('T')[0],
     due_date: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // 14 days due
-    billed_to: { name: '', company: '', email: '', phone: '', address: '' },
-    billed_by: { company: 'Kaira Technologies', email: 'info@kaira.com', phone: '+91 98765 43210', address: 'Chennai, Tamil Nadu, India' },
+    billed_to: { name: '', company: '', email: '', phone: '', address: '', gst_number: '' },
+    billed_by: { company: 'KAIRA TECHNOLOGIES', email: 'info@kairatechnologies.in', phone: '6379430293', address: 'Kovilpatti, Tamil Nadu, India' },
     tax_percent: 18.00, // Default GST in India
     notes: '',
     payment_terms: 'Payable within 14 days via UPI, Net Banking, or GPay.',
+    invoice_type: 'with_gst',
   });
   const [lineItems, setLineItems] = useState<InvoiceItem[]>([
     { description: '', quantity: 1, unit_price: 0, total: 0 }
@@ -51,12 +52,12 @@ export default function InvoicesPage() {
 
   const fetchInvoices = useCallback(async () => {
     setLoading(true);
-    
+
     // Safe independent load for Invoices
     try {
       const invRes = await invoiceAPI.getAll();
       setInvoices(invRes.data);
-      
+
       // Calculate statistics
       let total = 0, pending = 0, paid = 0, cancelled = 0;
       invRes.data.forEach((inv: any) => {
@@ -101,14 +102,15 @@ export default function InvoicesPage() {
           company: selected.company_name || '',
           email: selected.email || '',
           phone: selected.phone || '',
-          address: 'Client Office Address' // Placeholder
+          address: 'Client Office Address', // Placeholder
+          gst_number: ''
         }
       }));
     } else {
       setForm(prev => ({
         ...prev,
         client_id: '',
-        billed_to: { name: '', company: '', email: '', phone: '', address: '' }
+        billed_to: { name: '', company: '', email: '', phone: '', address: '', gst_number: '' }
       }));
     }
   };
@@ -126,7 +128,7 @@ export default function InvoicesPage() {
   const updateItemField = (idx: number, field: keyof InvoiceItem, value: string | number) => {
     const nextItems = [...lineItems];
     const item = { ...nextItems[idx] };
-    
+
     if (field === 'description') {
       item.description = value as string;
     } else {
@@ -150,7 +152,7 @@ export default function InvoicesPage() {
       alert("Please fill complete invoice details.");
       return;
     }
-    
+
     setSubmitting(true);
     try {
       const payload = {
@@ -171,8 +173,8 @@ export default function InvoicesPage() {
         client_id: '',
         invoice_date: new Date().toISOString().split('T')[0],
         due_date: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-        billed_to: { name: '', company: '', email: '', phone: '', address: '' },
-        billed_by: { company: 'Kaira Technologies', email: 'info@kaira.com', phone: '+91 98765 43210', address: 'Chennai, Tamil Nadu, India' },
+        billed_to: { name: '', company: '', email: '', phone: '', address: '', gst_number: '' },
+        billed_by: { company: 'KAIRA TECHNOLOGIES', email: 'info@kairatechnologies.in', phone: '6379430293', address: 'Kovilpatti, Tamil Nadu, India' },
         tax_percent: 18.00,
         notes: '',
         payment_terms: 'Payable within 14 days via UPI, Net Banking, or GPay.',
@@ -215,10 +217,10 @@ export default function InvoicesPage() {
     const to = typeof inv.billed_to === 'string' ? JSON.parse(inv.billed_to) : inv.billed_to;
     const clientName = to?.company || to?.name || 'Client';
     const phone = to?.phone?.replace(/\D/g, '');
-    
+
     const message = `Hi ${clientName},\n\nThis is a quick update regarding your Invoice *${inv.invoice_number}* from *Kaira Technologies*.\n\n*Total Outstanding Amount:* ₹${parseFloat(inv.total_amount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}\n*Invoice Status:* ${inv.status?.toUpperCase()}\n*Due Date:* ${new Date(inv.due_date).toLocaleDateString()}\n\nPlease clear the dues via GPay or Net Banking.\n\nThank you for your business!`;
-    
-    const url = phone 
+
+    const url = phone
       ? `https://web.whatsapp.com/send?phone=${phone}&text=${encodeURIComponent(message)}`
       : `https://web.whatsapp.com/send?text=${encodeURIComponent(message)}`;
     window.open(url, '_blank');
@@ -230,18 +232,121 @@ export default function InvoicesPage() {
       alert("Printable canvas area not initialized.");
       return;
     }
-    
-    const opt = {
-      margin:       0,
-      filename:     `Invoice_${inv.invoice_number || 'record'}.pdf`,
-      image:        { type: 'jpeg', quality: 1.0 },
-      html2canvas:  { scale: 3, useCORS: true, letterRendering: true, logging: false },
-      jsPDF:        { unit: 'in', format: 'a4', orientation: 'portrait' }
+
+    const getBase64FromUrl = async (url: string): Promise<string> => {
+      const data = await fetch(url);
+      const blob = await data.blob();
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result as string);
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
     };
 
-    const runSave = () => {
+    const opt = {
+      margin: [1.75, 0, 1.25, 0], // Dynamically inject physical [top, left, bottom, right] gaps in inches on EVERY sliced page
+      filename: `Invoice_${inv.invoice_number || 'record'}.pdf`,
+      image: { type: 'jpeg', quality: 1.0 },
+      html2canvas: { scale: 3, useCORS: true, letterRendering: true, logging: false },
+      jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' },
+      pagebreak: { mode: 'css', avoid: '.avoid-break' }
+    };
+
+    const runSave = async () => {
       const html2pdf = (window as any).html2pdf;
-      html2pdf().set(opt).from(element).save();
+
+      // 1. Load Base64 Data URIs for the letterheads from internal /public folder
+      let topData = '', bottomData = '';
+      try {
+        topData = await getBase64FromUrl('/letterpadtop.png');
+        bottomData = await getBase64FromUrl('/letterpadbottom.png');
+      } catch (e) {
+        console.error("Error fetching letterpad assets:", e);
+      }
+
+      // 2. Get original DOM styling and temporarily force fully visible auto-height expansion with locked width to prevent content shifting
+      const origOverflow = element.style.overflow;
+      const origHeight = element.style.height;
+      const origWidth = element.style.width;
+      element.style.overflow = 'visible';
+      element.style.height = 'auto';
+      element.style.width = '794px'; // Lock layout to exact A4 pixel width for absolute capture alignment
+
+      // CRITICAL FIX: Force parent window body & documentElement to allow infinite scrolling during capture
+      // NextJS / Tailwind modals set body overflow to 'hidden', which triggers html2canvas to clip at Page 1!
+      const origBodyOverflow = document.body.style.overflow;
+      const origHtmlOverflow = document.documentElement.style.overflow;
+      document.body.style.overflow = 'visible';
+      document.documentElement.style.overflow = 'visible';
+
+      // We MUST temporarily zero out the on-screen margin-top/bottom of the content area
+      // because html2pdf's opt.margin is now injecting those gaps dynamically on every physical page!
+      const contentEl = element.querySelector('.print-area-content') as HTMLElement;
+      let origContentMTop = '', origContentMBot = '';
+      if (contentEl) {
+        origContentMTop = contentEl.style.marginTop;
+        origContentMBot = contentEl.style.marginBottom;
+        contentEl.style.setProperty('margin-top', '0', 'important');
+        contentEl.style.setProperty('margin-bottom', '0', 'important');
+      }
+
+      // 3. Temporarily hide HTML letterhead images to prevent duplicate renders on static capture
+      const rawImgs = element.querySelectorAll('.letterhead-top-fixed, .letterhead-bottom-fixed');
+      rawImgs.forEach((img: any) => { img.style.visibility = 'hidden'; });
+
+      // 4. Dynamically compute the EXACT vertical viewport height required to capture ALL sliced pages
+      const totalHeight = element.scrollHeight || 1200;
+      const dynamicOpt = {
+        ...opt,
+        html2canvas: {
+          ...opt.html2canvas,
+          height: totalHeight,
+          windowHeight: totalHeight
+        }
+      };
+
+      // 5. Execute html2pdf pipeline with industrial multi-page jsPDF injection!
+      try {
+        await html2pdf()
+          .set(dynamicOpt)
+          .from(element)
+          .toPdf()
+          .get('pdf')
+          .then((pdf: any) => {
+            if (!topData || !bottomData) return;
+            const pdfPages = pdf.internal.getNumberOfPages();
+            const PAGE_W = 8.2673; // A4 width in inches
+            const PAGE_H = 11.6929; // A4 height in inches
+            const topH = PAGE_W * 0.20759; // Calculated header aspect ratio (fits precisely into top margin gap)
+            const bottomH = PAGE_W * 0.14341; // Calculated footer aspect ratio (fits precisely into bottom margin gap)
+
+            for (let i = 1; i <= pdfPages; i++) {
+              pdf.setPage(i);
+              // Top image anchored absolutely at (0,0) in its clean, pre-spaced margin
+              pdf.addImage(topData, 'PNG', 0, 0, PAGE_W, topH, undefined, 'FAST');
+              // Bottom image anchored absolutely at (0, PAGE_H - bottomH) in its clean, pre-spaced margin
+              pdf.addImage(bottomData, 'PNG', 0, PAGE_H - bottomH, PAGE_W, bottomH, undefined, 'FAST');
+            }
+            (window as any).LATEST_PDF_BASE64 = pdf.output('datauristring');
+          })
+          .save();
+      } catch (err) {
+        console.error("PDF Generation failed", err);
+        alert("Could not generate PDF correctly. Try using 'Print Window' mode.");
+      } finally {
+        // 6. Restore HTML node visibility and layout properties for visual consistency
+        element.style.overflow = origOverflow;
+        element.style.height = origHeight;
+        element.style.width = origWidth;
+        document.body.style.overflow = origBodyOverflow;
+        document.documentElement.style.overflow = origHtmlOverflow;
+        if (contentEl) {
+          contentEl.style.marginTop = origContentMTop;
+          contentEl.style.marginBottom = origContentMBot;
+        }
+        rawImgs.forEach((img: any) => { img.style.visibility = 'visible'; });
+      }
     };
 
     if (!(window as any).html2pdf) {
@@ -262,6 +367,29 @@ export default function InvoicesPage() {
     <div className="p-6 space-y-8">
       {/* Printable Style Hacks */}
       <style>{`
+        /* Content Boundary Safeguards for both Screen & Print (Using strict pixels for html2canvas reliability) */
+        .print-area-content {
+          margin-top: 174px !important;
+          margin-bottom: 136px !important;
+          padding-top: 0 !important;
+          padding-bottom: 0 !important;
+        }
+        /* Screen-based Absolute Anchors */
+        .letterhead-top-fixed {
+          position: absolute !important;
+          top: 0 !important;
+          left: 0 !important;
+          width: 100% !important;
+          z-index: 50 !important;
+        }
+        .letterhead-bottom-fixed {
+          position: absolute !important;
+          bottom: 0 !important;
+          left: 0 !important;
+          width: 100% !important;
+          z-index: 50 !important;
+        }
+
         @media print {
           body { 
             background-color: #FFFFFF !important; 
@@ -285,9 +413,30 @@ export default function InvoicesPage() {
             padding: 0 !important;
           }
           .no-print { display: none !important; }
+
+          /* Re-apply high-precision millimeters for native printer driver splitting */
+          .print-area-content {
+            margin-top: 46mm !important;
+            margin-bottom: 36mm !important;
+          }
+
+          /* Locked Repetition Anchors for browser page splitting */
+          .letterhead-top-fixed {
+            position: fixed !important;
+            top: 0 !important;
+          }
+          .letterhead-bottom-fixed {
+            position: fixed !important;
+            bottom: 0 !important;
+          }
+
           @page { 
             size: A4 portrait; 
             margin: 0 !important; 
+          }
+          .avoid-break {
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
           }
         }
       `}</style>
@@ -295,7 +444,7 @@ export default function InvoicesPage() {
       {/* Header Layout */}
       <div className="flex items-center justify-between no-print">
         <div>
-          <h1 className="text-3xl font-black text-gray-900 dark:text-white tracking-tight bg-gradient-to-r from-white via-gray-200 to-gray-500 bg-clip-text">Sales Billing & Ledgers</h1>
+          <h1 className="text-2xl md:text-3xl font-black text-gray-900 dark:text-white tracking-tight bg-gradient-to-r from-white via-gray-200 to-gray-500 bg-clip-text">Sales Billing & Ledgers</h1>
           <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">Build robust GST invoices, manage returned orders and monitor receivables.</p>
         </div>
         <div className="flex items-center gap-3">
@@ -317,7 +466,7 @@ export default function InvoicesPage() {
             <p className="text-[10px] text-gray-500 mt-1">Excluding cancelled invoices</p>
           </div>
         </div>
-        
+
         <div className="stat-card-luxury border-l-4 border-l-emerald-500">
           <div>
             <p className="text-xs text-emerald-500 font-bold uppercase tracking-widest">Paid / Collected</p>
@@ -350,7 +499,7 @@ export default function InvoicesPage() {
       {/* Invoices Ledger Table */}
       <div className="card overflow-hidden p-0 border border-gray-100 dark:border-white/5 no-print">
         <div className="bg-gray-50 dark:bg-white/[0.02] px-6 py-4 border-b border-gray-100 dark:border-white/5 flex justify-between items-center">
-          <h3 className="text-sm font-bold text-gray-800 dark:text-gray-200 flex items-center gap-2"><FiFileText className="text-primary-400"/> Invoices & Billing Ledger</h3>
+          <h3 className="text-sm font-bold text-gray-800 dark:text-gray-200 flex items-center gap-2"><FiFileText className="text-primary-400" /> Invoices & Billing Ledger</h3>
           <span className="text-xs bg-primary-500/10 text-primary-400 font-mono px-2.5 py-1 rounded-lg border border-primary-500/20">{invoices.length} Total Entries</span>
         </div>
 
@@ -383,7 +532,7 @@ export default function InvoicesPage() {
                 {invoices.map(inv => {
                   const clientData = typeof inv.billed_to === 'string' ? JSON.parse(inv.billed_to) : inv.billed_to;
                   const status = inv.status || 'draft';
-                  
+
                   return (
                     <tr key={inv.id} className="hover:bg-white/[0.02] transition-all group">
                       <td className="py-4 px-6">
@@ -404,15 +553,14 @@ export default function InvoicesPage() {
                       <td className="py-4 px-6">
                         <div className="flex items-center justify-center">
                           {/* EASY SELECT BOX FOR INSTANT STATUS CHANGES */}
-                          <select 
+                          <select
                             value={status}
                             onChange={(e) => handleStatusChange(inv.id, e.target.value)}
-                            className={`text-xs font-bold rounded-lg border px-2.5 py-1.5 outline-none cursor-pointer transition-all ${
-                              status === 'paid' ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400' :
+                            className={`text-xs font-bold rounded-lg border px-2.5 py-1.5 outline-none cursor-pointer transition-all ${status === 'paid' ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400' :
                               status === 'overdue' ? 'bg-amber-500/10 border-amber-500/30 text-amber-400' :
-                              status === 'cancelled' ? 'bg-red-500/10 border-red-500/30 text-red-400' :
-                              'bg-blue-500/10 border-blue-500/30 text-blue-400' // standard sent/unpaid
-                            }`}
+                                status === 'cancelled' ? 'bg-red-500/10 border-red-500/30 text-red-400' :
+                                  'bg-blue-500/10 border-blue-500/30 text-blue-400' // standard sent/unpaid
+                              }`}
                           >
                             <option value="sent" className="bg-dark text-white">Unpaid (Sent)</option>
                             <option value="paid" className="bg-dark text-white">Paid</option>
@@ -449,7 +597,7 @@ export default function InvoicesPage() {
       {showCreateModal && (
         <div className="modal-overlay no-print flex items-center justify-center">
           <div className="modal-box max-w-4xl w-full p-0 overflow-hidden bg-white dark:bg-[#0d0f14] border border-gray-200 dark:border-white/10 shadow-2xl rounded-3xl animate-zoom-in">
-            
+
             {/* Premium Branded Modal Header */}
             <div className="flex items-center justify-between px-8 py-5 border-b border-gray-100 dark:border-white/5 bg-gradient-to-r from-gray-50 via-white to-gray-50 dark:from-[#131722] dark:to-[#0d0f14]">
               <div className="flex items-center gap-3">
@@ -465,22 +613,22 @@ export default function InvoicesPage() {
             </div>
 
             <form onSubmit={handleSaveInvoice} className="p-8 space-y-8 max-h-[80vh] overflow-y-auto custom-scrollbar text-gray-900 dark:text-white">
-              
+
               {/* STEP 1: Core Billing Particulars Container */}
               <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
                 {/* Left side: Customer Selection & Dates (3 cols) */}
                 <div className="lg:col-span-3 space-y-6">
-                  
+
                   <div className="space-y-2">
                     <div className="flex items-center gap-2 text-primary-500">
                       <span className="text-[10px] font-black bg-primary-500/10 text-primary-400 px-1.5 py-0.5 rounded">01</span>
                       <label className="text-xs font-bold uppercase tracking-widest">Select Billing Recipient</label>
                     </div>
                     <div className="relative">
-                      <select 
-                        className="w-full rounded-xl bg-gray-50 dark:bg-white/[0.03] border border-gray-200 dark:border-white/10 px-4 py-3 font-bold text-sm outline-none focus:ring-2 focus:ring-primary-500/40 transition-all cursor-pointer text-gray-800 dark:text-gray-200 appearance-none" 
-                        value={form.client_id} 
-                        onChange={(e) => handleClientChange(e.target.value)} 
+                      <select
+                        className="w-full rounded-xl bg-gray-50 dark:bg-white/[0.03] border border-gray-200 dark:border-white/10 px-4 py-3 font-bold text-sm outline-none focus:ring-2 focus:ring-primary-500/40 transition-all cursor-pointer text-gray-800 dark:text-gray-200 appearance-none"
+                        value={form.client_id}
+                        onChange={(e) => handleClientChange(e.target.value)}
                         required
                       >
                         <option value="" className="bg-white dark:bg-dark text-gray-400">-- Choose Active Client to Invoice --</option>
@@ -500,11 +648,11 @@ export default function InvoicesPage() {
                         <span className="text-[10px] font-black bg-primary-500/10 text-primary-400 px-1.5 py-0.5 rounded">02</span>
                         <label className="text-xs font-bold uppercase tracking-widest">Billed Date</label>
                       </div>
-                      <input type="date" className="w-full rounded-xl bg-gray-50 dark:bg-white/[0.03] border border-gray-200 dark:border-white/10 px-4 py-2.5 text-xs font-bold outline-none focus:border-primary-500 text-gray-800 dark:text-gray-100" value={form.invoice_date} onChange={(e) => setForm({...form, invoice_date: e.target.value})} required />
+                      <input type="date" className="w-full rounded-xl bg-gray-50 dark:bg-white/[0.03] border border-gray-200 dark:border-white/10 px-4 py-2.5 text-xs font-bold outline-none focus:border-primary-500 text-gray-800 dark:text-gray-100" value={form.invoice_date} onChange={(e) => setForm({ ...form, invoice_date: e.target.value })} required />
                     </div>
                     <div className="space-y-2">
                       <label className="text-xs font-bold text-gray-400 uppercase tracking-widest flex items-center gap-2"><span className="text-[10px] bg-red-500/10 text-red-400 px-1.5 py-0.5 rounded">Due</span> Deadline</label>
-                      <input type="date" className="w-full rounded-xl bg-red-50/50 dark:bg-red-500/[0.03] border border-red-100 dark:border-red-500/20 px-4 py-2.5 text-xs font-bold outline-none text-red-600 dark:text-red-400 focus:border-red-500" value={form.due_date} min={form.invoice_date} onChange={(e) => setForm({...form, due_date: e.target.value})} required />
+                      <input type="date" className="w-full rounded-xl bg-red-50/50 dark:bg-red-500/[0.03] border border-red-100 dark:border-red-500/20 px-4 py-2.5 text-xs font-bold outline-none text-red-600 dark:text-red-400 focus:border-red-500" value={form.due_date} min={form.invoice_date} onChange={(e) => setForm({ ...form, due_date: e.target.value })} required />
                     </div>
                   </div>
                 </div>
@@ -512,13 +660,13 @@ export default function InvoicesPage() {
                 {/* Right side: Rich Auto Populated Client Display (2 cols) */}
                 <div className="lg:col-span-2 bg-primary-50/30 dark:bg-primary-500/[0.03] border border-primary-100/60 dark:border-primary-500/10 rounded-2xl p-6 flex flex-col justify-between relative overflow-hidden group shadow-inner">
                   <div className="absolute -top-6 -right-6 w-24 h-24 bg-primary-500/5 rounded-full blur-xl group-hover:bg-primary-500/10 transition-all duration-700"></div>
-                  
+
                   <div className="space-y-3 relative z-10">
                     <div className="flex items-center justify-between border-b border-primary-100 dark:border-primary-500/10 pb-2.5">
-                      <span className="text-[10px] font-black text-primary-600 dark:text-primary-400 uppercase tracking-widest flex items-center gap-1.5"><FiInfo/> Recipient Info</span>
+                      <span className="text-[10px] font-black text-primary-600 dark:text-primary-400 uppercase tracking-widest flex items-center gap-1.5"><FiInfo /> Recipient Info</span>
                       <span className="text-[10px] bg-primary-500/10 text-primary-600 dark:text-primary-400 font-bold px-2 py-0.5 rounded border border-primary-500/20">Auto Sync</span>
                     </div>
-                    
+
                     {form.billed_to.company ? (
                       <div className="space-y-2 pt-1">
                         <p className="font-extrabold text-base text-gray-900 dark:text-white tracking-tight leading-tight">{form.billed_to.company}</p>
@@ -527,10 +675,16 @@ export default function InvoicesPage() {
                           {form.billed_to.email && <p className="flex items-center gap-1.5"><FiMail className="text-primary-500" size={12} /> {form.billed_to.email}</p>}
                           {form.billed_to.phone && <p className="flex items-center gap-1.5"><FiPhone className="text-primary-500" size={12} /> {form.billed_to.phone}</p>}
                         </div>
+                        {form.tax_percent > 0 && (
+                          <div className="mt-3 pt-3 border-t border-primary-100 dark:border-primary-500/10">
+                            <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block mb-1">Client GSTIN (Optional)</label>
+                            <input type="text" className="w-full rounded-xl bg-white dark:bg-[#0d0f14] border border-gray-200 dark:border-white/10 px-3 py-2 text-xs font-bold outline-none focus:border-primary-500 text-gray-800 dark:text-gray-100 uppercase transition-all" placeholder="Enter 15-digit GSTIN" value={form.billed_to.gst_number || ''} onChange={e => setForm({ ...form, billed_to: { ...form.billed_to, gst_number: e.target.value.toUpperCase() } })} />
+                          </div>
+                        )}
                       </div>
                     ) : (
                       <div className="py-8 text-center text-xs text-gray-400 font-medium flex flex-col items-center justify-center gap-2 animate-pulse">
-                        <FiChevronRight className="rotate-90 text-primary-400" size={20}/>
+                        <FiChevronRight className="rotate-90 text-primary-400" size={20} />
                         Choose a client to populate their verified business details.
                       </div>
                     )}
@@ -543,11 +697,11 @@ export default function InvoicesPage() {
                 <div className="flex items-center justify-between border-b border-gray-100 dark:border-white/5 pb-2">
                   <div className="flex items-center gap-2">
                     <span className="text-[10px] font-black bg-emerald-500/10 text-emerald-400 px-1.5 py-0.5 rounded">03</span>
-                    <label className="text-xs font-black text-gray-900 dark:text-gray-200 uppercase tracking-widest flex items-center gap-1.5"><FiFolderMinus className="text-gray-400"/> Particulars & Rates Catalog</label>
+                    <label className="text-xs font-black text-gray-900 dark:text-gray-200 uppercase tracking-widest flex items-center gap-1.5"><FiFolderMinus className="text-gray-400" /> Particulars & Rates Catalog</label>
                   </div>
-                  <button type="button" onClick={addLineItem} className="text-[11px] text-primary-500 dark:text-primary-400 hover:bg-primary-500/10 hover:text-primary-600 bg-primary-50 dark:bg-primary-500/[0.05] border border-primary-200 dark:border-primary-500/20 px-3.5 py-1.5 rounded-xl font-extrabold flex items-center gap-1.5 transition-all shadow-sm"><FiPlus size={13} className="stroke-[3px]"/> Add Item Row</button>
+                  <button type="button" onClick={addLineItem} className="text-[11px] text-primary-500 dark:text-primary-400 hover:bg-primary-500/10 hover:text-primary-600 bg-primary-50 dark:bg-primary-500/[0.05] border border-primary-200 dark:border-primary-500/20 px-3.5 py-1.5 rounded-xl font-extrabold flex items-center gap-1.5 transition-all shadow-sm"><FiPlus size={13} className="stroke-[3px]" /> Add Item Row</button>
                 </div>
-                
+
                 {/* Line Item Grid Headers */}
                 <div className="grid grid-cols-12 gap-3 px-4 text-[10px] font-black uppercase tracking-widest text-gray-400">
                   <div className="col-span-6">Description of Service</div>
@@ -582,33 +736,40 @@ export default function InvoicesPage() {
 
               {/* STEP 3: Summary Balance & GST Breakdown */}
               <div className="flex flex-col md:flex-row items-start justify-between gap-6 pt-4 border-t border-gray-100 dark:border-white/5">
-                
+
                 {/* Left: Custom Notes Inputs */}
                 <div className="flex-1 w-full grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-1.5">
                     <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Invoice Note / Remarks</label>
-                    <textarea className="w-full rounded-xl bg-gray-50 dark:bg-white/[0.02] border border-gray-200 dark:border-white/10 p-3 h-[76px] text-xs font-semibold resize-none outline-none focus:border-primary-500 text-gray-800 dark:text-gray-200 placeholder-gray-400/60" placeholder="Add internal tracking notes..." value={form.notes} onChange={e => setForm({...form, notes: e.target.value})} />
+                    <textarea className="w-full rounded-xl bg-gray-50 dark:bg-white/[0.02] border border-gray-200 dark:border-white/10 p-3 h-[76px] text-xs font-semibold resize-none outline-none focus:border-primary-500 text-gray-800 dark:text-gray-200 placeholder-gray-400/60" placeholder="Add internal tracking notes..." value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} />
                   </div>
                   <div className="space-y-1.5">
                     <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Settlement Instructions</label>
-                    <textarea className="w-full rounded-xl bg-gray-50 dark:bg-white/[0.02] border border-gray-200 dark:border-white/10 p-3 h-[76px] text-xs font-semibold resize-none outline-none focus:border-primary-500 text-gray-800 dark:text-gray-200" value={form.payment_terms} onChange={e => setForm({...form, payment_terms: e.target.value})} />
+                    <textarea className="w-full rounded-xl bg-gray-50 dark:bg-white/[0.02] border border-gray-200 dark:border-white/10 p-3 h-[76px] text-xs font-semibold resize-none outline-none focus:border-primary-500 text-gray-800 dark:text-gray-200" value={form.payment_terms} onChange={e => setForm({ ...form, payment_terms: e.target.value })} />
                   </div>
                 </div>
 
                 {/* Right: Beautiful Total Box */}
                 <div className="w-full md:w-80 bg-gray-50 dark:bg-[#131722] border border-gray-200 dark:border-white/5 p-6 rounded-3xl space-y-3 shadow-inner">
+                  <div className="flex items-center justify-between gap-2 bg-gray-200/50 dark:bg-white/5 p-1 rounded-xl mb-4">
+                    <button type="button" onClick={() => setForm({ ...form, tax_percent: 18 })} className={`flex-1 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${form.tax_percent > 0 ? 'bg-white dark:bg-[#1f2937] text-primary-600 dark:text-primary-400 shadow-sm' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}`}>With GST</button>
+                    <button type="button" onClick={() => setForm({ ...form, tax_percent: 0 })} className={`flex-1 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${form.tax_percent === 0 ? 'bg-white dark:bg-[#1f2937] text-gray-800 dark:text-white shadow-sm' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}`}>Without GST</button>
+                  </div>
+
                   <div className="flex justify-between text-gray-500 dark:text-gray-400 font-extrabold text-[11px] uppercase tracking-wider">
                     <span>Gross Subtotal</span>
                     <span className="text-gray-900 dark:text-white font-mono font-black">₹{subtotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
                   </div>
-                  
-                  <div className="flex justify-between items-center text-gray-500 dark:text-gray-400 font-extrabold text-[11px] uppercase tracking-wider">
-                    <span className="flex items-center gap-1.5">GST Tax (%) <input type="number" step="0.5" className="w-12 bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded px-1 py-0.5 text-center text-[10px] focus:outline-none focus:ring-1 focus:ring-primary-500 text-primary-500 dark:text-primary-400 font-black font-mono" value={form.tax_percent} onChange={e => setForm({...form, tax_percent: parseFloat(e.target.value) || 0})} /></span>
-                    <span className="text-gray-900 dark:text-white font-mono font-black">₹{taxAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
-                  </div>
-                  
+
+                  {form.tax_percent > 0 && (
+                    <div className="flex justify-between items-center text-gray-500 dark:text-gray-400 font-extrabold text-[11px] uppercase tracking-wider">
+                      <span className="flex items-center gap-1.5">GST Tax (%) <input type="number" step="0.5" className="w-12 bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded px-1 py-0.5 text-center text-[10px] focus:outline-none focus:ring-1 focus:ring-primary-500 text-primary-500 dark:text-primary-400 font-black font-mono" value={form.tax_percent} onChange={e => setForm({ ...form, tax_percent: parseFloat(e.target.value) || 0 })} /></span>
+                      <span className="text-gray-900 dark:text-white font-mono font-black">₹{taxAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                    </div>
+                  )}
+
                   <div className="border-t border-gray-200 dark:border-white/10 my-2.5"></div>
-                  
+
                   <div className="flex justify-between items-center pt-0.5">
                     <span className="uppercase text-[11px] tracking-widest text-gray-400 font-extrabold">Grand Total</span>
                     <div className="text-right">
@@ -643,14 +804,14 @@ export default function InvoicesPage() {
         const to = typeof previewInvoice.billed_to === 'string' ? JSON.parse(previewInvoice.billed_to) : previewInvoice.billed_to;
         const from = typeof previewInvoice.billed_by === 'string' ? JSON.parse(previewInvoice.billed_by) : previewInvoice.billed_by;
         const items = typeof previewInvoice.line_items === 'string' ? JSON.parse(previewInvoice.line_items) : previewInvoice.line_items || [];
-        
+
         return (
-          <div className="modal-overlay">
-            <div className="modal-box max-w-3xl p-0 bg-white text-gray-900 print-only rounded-2xl shadow-2xl border border-gray-200 overflow-visible animate-slide-up no-scrollbar">
+          <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/60 overflow-y-auto p-4 md:p-8 no-scrollbar backdrop-blur-sm no-print">
+            <div className="modal-box w-full max-w-3xl my-8 p-0 bg-white text-gray-900 print-only rounded-2xl shadow-2xl border border-gray-200 overflow-visible animate-slide-up">
               {/* Screen Controls Bar (Always hidden during native print) */}
               <div className="flex items-center justify-between px-6 py-4 bg-gray-50 border-b border-gray-200 rounded-t-2xl no-print">
                 <div className="flex items-center gap-2">
-                  <FiFileText className="text-primary-600" size={18}/>
+                  <FiFileText className="text-primary-600" size={18} />
                   <span className="font-black text-gray-700 font-mono">Invoice #{previewInvoice.invoice_number}</span>
                 </div>
                 <div className="flex items-center gap-3">
@@ -658,26 +819,22 @@ export default function InvoicesPage() {
                     <FiSend size={14} /> Direct Download PDF
                   </button>
                   <button onClick={() => window.print()} className="px-5 py-2 bg-primary-600 text-white text-xs font-black tracking-wider uppercase rounded-xl hover:bg-primary-700 flex items-center gap-2 shadow-md transition-all">
-                    <FiPrinter size={14} className="stroke-[3px]"/> Print Window
+                    <FiPrinter size={14} className="stroke-[3px]" /> Print Window
                   </button>
                   <button onClick={() => setPreviewInvoice(null)} className="px-4 py-2 bg-gray-200 text-gray-800 text-xs font-bold rounded-xl hover:bg-gray-300 transition-all">Close</button>
                 </div>
               </div>
 
               {/* PRINTABLE PHYSICAL SURFACE AREA */}
-              <div id="printable-invoice-surface" className="bg-white print-area relative overflow-hidden w-full min-h-[297mm]">
-                {/* Top Navy Strip & Teal Accent */}
-                <div className="w-full h-3 bg-[#0F2537]"></div>
-                <div className="absolute top-0 left-0 w-0 h-0 border-t-[45px] border-t-[#4DD0E1] border-r-[45px] border-r-transparent z-10"></div>
+              <div id="printable-invoice-surface" className="bg-white print-area relative w-full min-h-[297mm] flex flex-col justify-between">
 
-                <div className="px-12 pt-8 pb-12 relative">
+                {/* Top Letterhead Image */}
+                <img src="/letterpadtop.png" alt="Header" data-html2canvas-ignore="true" className="w-full h-auto object-cover z-10 block letterhead-top-fixed" />
+
+                <div className="px-12 pt-2 pb-12 relative z-20 flex-1 print-area-content">
                   {/* Header Section */}
-                  <div className="flex items-center justify-between">
-                    <h1 className="text-6xl font-black text-[#0F2537] tracking-tighter uppercase">Invoice</h1>
-                    <div className="flex items-center justify-end">
-                      {/* Logo placeholder with default fallbacks */}
-                      <img src="/kaira_logo.png" alt="Brand Logo" className="h-12 object-contain" onError={(e)=>{(e.target as any).style.display='none'}} />
-                    </div>
+                  <div className="flex items-center mb-4">
+                    <h1 className="text-2xl md:text-3xl font-black text-[#0F2537] tracking-tighter uppercase">Invoice</h1>
                   </div>
 
                   {/* Bill To & Meta Info */}
@@ -688,6 +845,9 @@ export default function InvoicesPage() {
                         <p>Client Name: <span className="font-medium text-gray-600">{to?.name || 'Walk-in Customer'}</span></p>
                         <p>Company Name: <span className="font-medium text-gray-600">{to?.company || 'N/A'}</span></p>
                         <p>Billing Address: <span className="font-medium text-gray-600">{to?.address || 'Local Customer Address'}</span></p>
+                        {to?.gst_number && parseFloat(previewInvoice.tax_percent) > 0 && (
+                          <p>GSTIN: <span className="font-medium text-gray-600 tracking-wider uppercase">{to.gst_number}</span></p>
+                        )}
                         <p>Phone: <span className="font-medium text-gray-600">{to?.phone || 'N/A'}</span></p>
                         <p>Email: <span className="font-medium text-gray-600">{to?.email || 'N/A'}</span></p>
                       </div>
@@ -695,6 +855,9 @@ export default function InvoicesPage() {
                     <div className="flex flex-col justify-end text-right text-xs font-bold text-gray-900 mb-1">
                       <p className="mb-1">Invoice Number: <span className="font-medium text-gray-600">{previewInvoice.invoice_number}</span></p>
                       <p>Invoice Date: <span className="font-medium text-gray-600">{new Date(previewInvoice.invoice_date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</span></p>
+                      {parseFloat(previewInvoice.tax_percent) > 0 && (
+                        <p className="mt-1">GSTIN: <span className="font-medium text-gray-600 tracking-wider">33CYRPM9388Q1Z0</span></p>
+                      )}
                     </div>
                   </div>
 
@@ -742,10 +905,12 @@ export default function InvoicesPage() {
                           <span className="text-gray-500 font-bold">Subtotal</span>
                           <span>₹{parseFloat(previewInvoice.subtotal).toFixed(2)}</span>
                         </div>
-                        <div className="flex justify-between py-1 px-1 border-b border-gray-100">
-                          <span className="text-gray-500 font-bold">Tax ({parseFloat(previewInvoice.tax_percent)}%)</span>
-                          <span>₹{parseFloat(previewInvoice.tax_amount).toFixed(2)}</span>
-                        </div>
+                        {parseFloat(previewInvoice.tax_percent) > 0 && (
+                          <div className="flex justify-between py-1 px-1 border-b border-gray-100">
+                            <span className="text-gray-500 font-bold">Tax ({parseFloat(previewInvoice.tax_percent)}%)</span>
+                            <span>₹{parseFloat(previewInvoice.tax_amount).toFixed(2)}</span>
+                          </div>
+                        )}
                         <div className="flex justify-between items-center py-3 px-1 font-black text-gray-900 border-b-4 border-double border-gray-900 mt-1 text-base">
                           <span>Total Amount Due</span>
                           <span>₹{parseFloat(previewInvoice.total_amount).toFixed(2)}</span>
@@ -754,45 +919,59 @@ export default function InvoicesPage() {
                     </div>
                   </div>
 
-                  {/* Thick Navy Separator Bar */}
-                  <div className="w-full bg-[#0F2537] text-white py-3.5 px-12 -mx-12 mt-14 flex items-center font-extrabold text-lg tracking-widest uppercase">
-                    Payment Information:
-                  </div>
-
-                  {/* Footer Section holding details & signature area */}
-                  <div className="grid grid-cols-2 gap-8 mt-8">
-                    <div className="text-xs font-bold text-[#111827] space-y-6">
-                      <div className="space-y-1">
-                        <p>Payment Method: <span className="font-medium text-gray-600">UPI / Net Banking</span></p>
-                        <p>Due Date: <span className="font-medium text-gray-600">{new Date(previewInvoice.due_date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</span></p>
-                        <p>Bank Account: <span className="font-medium text-gray-600">Transfer to {from?.company || 'Kaira Technologies'}</span></p>
-                      </div>
-                      
-                      <div>
-                        <h4 className="font-black text-lg text-gray-900 tracking-wide mb-2">Questions</h4>
-                        <p>Email US: <span className="font-medium text-gray-600">{from?.email || 'info@kaira.com'}</span></p>
-                        <p>Call US: <span className="font-medium text-gray-600">{from?.phone || '+91 98765 43210'}</span></p>
-                      </div>
+                  <div className="avoid-break break-inside-avoid">
+                    {/* Thick Navy Separator Bar */}
+                    <div className="w-full bg-[#0F2537] text-white py-3.5 px-12 -mx-12 mt-14 flex items-center font-extrabold text-lg tracking-widest uppercase">
+                      Payment Information:
                     </div>
 
-                    {/* Date and Authorize Section */}
-                    <div className="flex flex-col items-center justify-end">
-                      <p className="text-xs font-bold text-gray-900 mb-6">Date: <span className="font-medium text-gray-600">{new Date(previewInvoice.invoice_date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</span></p>
-                      
-                      <div className="w-48 flex flex-col items-center border-t border-gray-900 pt-2 mt-2 text-center relative">
-                        {/* Clean digital representation of an authorized signature mark */}
-                        <div className="absolute -top-8 font-signature italic text-gray-400 text-2xl font-black select-none">
-                          {from?.company?.split(' ')[0] || 'Kaira'}
+                    {/* Footer Section holding details & signature area */}
+                    <div className="grid grid-cols-2 gap-8 mt-8">
+                      <div className="text-xs font-bold text-[#111827] space-y-6">
+                        <div className="space-y-1">
+                          <p>Payment Method: <span className="font-medium text-gray-600">NEFT / RTGS / IMPS</span></p>
+                          <p>Due Date: <span className="font-medium text-gray-600">{new Date(previewInvoice.due_date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</span></p>
+                          <div className="mt-2 pt-3 border-t border-gray-200">
+                            <p className="text-gray-500 uppercase tracking-widest text-[9px] mb-1.5 font-black">Bank Account Details</p>
+                            <p>Account Name: <span className="font-medium text-gray-600">KAIRA TECHNOLOGIES</span></p>
+                            <p>Account No: <span className="font-medium text-gray-600 font-mono tracking-wider">50200100674261</span></p>
+                            <p>IFSC Code: <span className="font-medium text-gray-600 font-mono tracking-wider">HDFC0002021</span></p>
+                            <p>Bank Name: <span className="font-medium text-gray-600">HDFC Bank, KOVILPATTI BRANCH</span></p>
+                          </div>
                         </div>
-                        <p className="font-extrabold text-gray-900 text-xs tracking-wide uppercase">{from?.company || 'Kaira Technologies'}</p>
+
+                        <div>
+                          <h4 className="font-black text-lg text-gray-900 tracking-wide mb-2">Questions</h4>
+                          <p>Email US: <span className="font-medium text-gray-600">info@kairatechnologies.in</span></p>
+                          <p>Call US: <span className="font-medium text-gray-600">6379430293</span></p>
+                        </div>
+                      </div>
+
+                      {/* Date and Authorize Section */}
+                      <div className="flex flex-col items-center justify-end">
+                        <p className="text-xs font-bold text-gray-900 mb-6">Date: <span className="font-medium text-gray-600">{new Date(previewInvoice.invoice_date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</span></p>
+
+                        <div className="w-56 flex flex-col items-center text-center relative">
+                          {/* Clean digital representation of an authorized signature mark - ABOVE THE LINE */}
+                          <div className="text-blue-800 text-4xl opacity-90 select-none transform -rotate-3 mb-1 font-semibold" style={{ fontFamily: "'Brush Script MT', 'Alex Brush', 'Great Vibes', cursive" }}>
+                            {from?.company?.split(' ')[0] || 'Kaira'}
+                          </div>
+
+                          {/* Divider and text below it */}
+                          <div className="w-full border-t border-gray-900 pt-2 mt-1">
+                            <p className="font-extrabold text-gray-900 text-xs tracking-wide uppercase">{from?.company || 'Kaira Technologies'}</p>
+                            <p className="text-[9px] text-gray-500 font-bold uppercase tracking-widest mt-0.5">Authorized Signatory</p>
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </div>
                 </div>
 
-                {/* Bottom Accent Bar and Corner */}
-                <div className="absolute bottom-0 left-0 w-full h-4 bg-[#0F2537] z-20"></div>
-                <div className="absolute bottom-0 right-0 w-0 h-0 border-b-[55px] border-b-[#4DD0E1] border-l-[55px] border-l-transparent z-30"></div>
+                {/* Bottom Letterhead Image */}
+                <div className="w-full mt-auto block letterhead-bottom-fixed" data-html2canvas-ignore="true">
+                  <img src="/letterpadbottom.png" alt="Footer" className="w-full h-auto object-cover block" />
+                </div>
               </div>
             </div>
           </div>

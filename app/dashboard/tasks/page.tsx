@@ -156,8 +156,8 @@ export default function TasksPage() {
             </div>
             <span className="text-[10px] font-black uppercase tracking-[0.3em]">Project Operations</span>
           </motion.div>
-          <h1 className="text-4xl md:text-5xl font-black text-gray-900 dark:text-white uppercase tracking-tight leading-none">
-            Task <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary-500 to-purple-500 dark:from-gold-400 dark:to-gold-600">Forge</span>
+          <h1 className="text-2xl md:text-3xl font-black text-gray-900 dark:text-white uppercase tracking-tight leading-none">
+            Tasks
           </h1>
         </div>
 
@@ -183,10 +183,10 @@ export default function TasksPage() {
 
       {/* Luxury Stats - Responsive Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
-         <LuxuryStatCard label="Total Forge" value={stats.total} icon={FiLayers} cls="text-blue-500" onClick={() => setFilterStatus('')} active={filterStatus === ''} />
+         <LuxuryStatCard label="Total Tasks" value={stats.total} icon={FiLayers} cls="text-blue-500" onClick={() => setFilterStatus('')} active={filterStatus === ''} />
          <LuxuryStatCard label="Pending" value={stats.pending} icon={FiClock} cls="text-orange-500" onClick={() => setFilterStatus('pending')} active={filterStatus === 'pending'} />
          <LuxuryStatCard label="In Motion" value={stats.active} icon={FiActivity} cls="text-purple-500" onClick={() => setFilterStatus('in_progress')} active={filterStatus === 'in_progress'} />
-         <LuxuryStatCard label="Forged" value={stats.completed} icon={FiCheckCircle} cls="text-emerald-500" onClick={() => setFilterStatus('completed')} active={filterStatus === 'completed'} />
+         <LuxuryStatCard label="Completed" value={stats.completed} icon={FiCheckCircle} cls="text-emerald-500" onClick={() => setFilterStatus('completed')} active={filterStatus === 'completed'} />
       </div>
 
       {/* Toolbar */}
@@ -249,7 +249,7 @@ export default function TasksPage() {
                               <div className="w-5 h-5 rounded-lg bg-gray-100 dark:bg-white/10 text-gray-400 flex items-center justify-center">
                                  <FiTarget size={10} />
                               </div>
-                              <p className="text-[10px] font-bold text-gray-500 dark:text-gray-400 truncate uppercase tracking-widest">{task.team_name || 'Personal Forge'}</p>
+                              <p className="text-[10px] font-bold text-gray-500 dark:text-gray-400 truncate uppercase tracking-widest">{task.team_name || 'Personal Task'}</p>
                            </div>
 
                            <div className="flex items-center justify-between pt-2 border-t border-gray-50 dark:border-white/5">
@@ -420,7 +420,7 @@ export default function TasksPage() {
                 </button>
                 <button type="submit" disabled={loading}
                   className="flex-[2] py-4 bg-primary-600 dark:bg-gold-500 text-white dark:text-darker rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-primary-500/20 dark:shadow-gold-500/10 hover:opacity-90 transition-all active:scale-95 disabled:opacity-50">
-                  {loading ? 'Forging...' : 'Initiate Task'}
+                  {loading ? 'Saving...' : 'Create Task'}
                 </button>
               </div>
             </form>

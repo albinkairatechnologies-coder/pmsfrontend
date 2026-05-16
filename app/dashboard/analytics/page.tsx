@@ -111,7 +111,7 @@ export default function AnalyticsPage() {
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">HR Analytics</h1>
+          <h1 className="text-2xl md:text-3xl font-black text-gray-900 dark:text-white">HR Analytics</h1>
           <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">Workforce insights across all modules</p>
         </div>
         <div className="flex items-center gap-3">

@@ -254,7 +254,7 @@ export default function EODPage() {
 
   return (
     <div>
-      <h1 className="text-3xl font-bold text-gray-800 dark:text-white mb-8">EOD Report</h1>
+      <h1 className="text-2xl md:text-3xl font-black text-gray-800 dark:text-white mb-8">EOD Report</h1>
       {isAdmin ? <AdminEOD /> : <UserEOD />}
     </div>
   );

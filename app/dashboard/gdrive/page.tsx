@@ -244,7 +244,7 @@ export default function GoogleDrivePage() {
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-gray-800 dark:text-white">📁 My Google Drive</h1>
+          <h1 className="text-2xl md:text-3xl font-black text-gray-800 dark:text-white">📁 My Google Drive</h1>
           <p className="text-sm text-gray-500 dark:text-gray-400">{userEmail}</p>
         </div>
         <div className="flex items-center gap-2">

@@ -349,7 +349,7 @@ export default function PermissionsPage() {
     <div>
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white tracking-tight flex items-center gap-2">
+          <h1 className="text-2xl md:text-3xl font-black text-gray-900 dark:text-white tracking-tight flex items-center gap-2">
             <FiClock className="text-primary-500" /> Permissions
           </h1>
           <p className="text-sm text-gray-500 mt-0.5">Request short-time permission during work hours</p>

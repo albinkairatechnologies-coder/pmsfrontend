@@ -129,7 +129,7 @@ export default function WorkLogsPage() {
   return (
     <div>
       <div className="flex justify-between items-center mb-8">
-        <h1 className="text-3xl font-bold text-gray-800 dark:text-white">Work Logs</h1>
+        <h1 className="text-2xl md:text-3xl font-black text-gray-800 dark:text-white">Work Logs</h1>
         <button onClick={() => setShowModal(true)} className="btn-primary flex items-center gap-2">
           <FiPlus /> Log Work
         </button>

@@ -45,7 +45,7 @@ export default function DashboardLayout({
               <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary-500 to-secondary-500 flex items-center justify-center flex-shrink-0">
                 <span className="text-white font-bold text-sm">K</span>
               </div>
-              <h1 className="text-lg font-bold text-gray-900 dark:text-white tracking-tight">KairaFlow</h1>
+              <h1 className="text-2xl md:text-3xl font-black text-gray-900 dark:text-white tracking-tight">KairaFlow</h1>
            </div>
            <button onClick={() => setSidebarOpen(true)} className="p-2 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5 rounded-xl transition-all">
               <FiMenu size={24} />

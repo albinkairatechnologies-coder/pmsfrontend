@@ -97,7 +97,7 @@ export default function ClientsPage() {
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Clients</h1>
+          <h1 className="text-2xl md:text-3xl font-black text-gray-900 dark:text-white">Clients</h1>
           <p className="text-gray-500 text-sm mt-0.5">{clients.length} total clients</p>
         </div>
         <button onClick={() => setShowModal(true)} className="btn-primary gap-2">

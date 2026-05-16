@@ -244,7 +244,7 @@ export default function LeadsPage() {
              <FiTarget size={20} className="animate-pulse" />
           </div>
           <div>
-             <h1 className="text-xl md:text-2xl font-black text-gray-900 dark:text-white leading-none mb-1 tracking-tight">Leads</h1>
+             <h1 className="text-2xl md:text-3xl font-black text-gray-900 dark:text-white leading-none mb-1 tracking-tight">Leads</h1>
              <p className="text-[9px] md:text-[10px] uppercase font-black text-gray-400 tracking-widest opacity-70">Prospects & Conversions</p>
           </div>
         </div>

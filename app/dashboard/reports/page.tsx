@@ -180,7 +180,7 @@ export default function ReportsPage() {
 
   return (
     <div>
-      <h1 className="text-3xl font-bold text-gray-800 dark:text-white mb-8 no-print">Reports</h1>
+      <h1 className="text-2xl md:text-3xl font-black text-gray-800 dark:text-white mb-8 no-print">Reports</h1>
 
       {/* Filters */}
       <div className="card mb-6 no-print">

@@ -203,7 +203,7 @@ export default function CalendarPage() {
   return (
     <div className="space-y-6 animate-fade-in relative pb-10">
       <div className="flex flex-col gap-1">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+        <h1 className="text-2xl md:text-3xl font-black text-gray-900 dark:text-white flex items-center gap-2">
           <FiCalendar className="text-primary-500 dark:text-gold" /> Calendar
         </h1>
         <p className="text-xs text-gray-500 dark:text-gray-400">

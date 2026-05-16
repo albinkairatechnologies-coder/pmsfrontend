@@ -166,7 +166,7 @@ export default function FinancePage() {
       {/* Header */}
       <div className="flex justify-between items-end gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Finance</h1>
+          <h1 className="text-2xl md:text-3xl font-black text-gray-900 dark:text-white">Finance</h1>
           <p className="text-gray-500 text-sm mt-0.5">Client payment tracking & revenue overview</p>
         </div>
         <div className="flex gap-2">

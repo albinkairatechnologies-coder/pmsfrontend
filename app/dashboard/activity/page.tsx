@@ -102,7 +102,7 @@ export default function ActivityPage() {
              <FiActivity size={20} />
           </div>
           <div>
-            <h1 className="text-xl md:text-2xl font-black text-gray-900 dark:text-white tracking-tight flex items-center gap-2 uppercase">
+            <h1 className="text-2xl md:text-3xl font-black text-gray-900 dark:text-white tracking-tight flex items-center gap-2 uppercase">
               Live Monitor
             </h1>
             <p className="text-[9px] md:text-[10px] font-black uppercase tracking-widest text-gray-400 mt-0.5 opacity-70">

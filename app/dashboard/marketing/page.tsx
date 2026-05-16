@@ -92,7 +92,7 @@ const MarketingDashboard = () => {
     <div className="p-4 md:p-6 bg-slate-50 dark:bg-darker min-h-screen text-slate-900 dark:text-white font-sans">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
         <div>
-          <h1 className="text-2xl md:text-3xl font-bold text-slate-800 dark:text-white tracking-tight">Marketing Dashboard</h1>
+          <h1 className="text-2xl md:text-3xl font-black text-slate-800 dark:text-white tracking-tight">Marketing Dashboard</h1>
           <p className="text-slate-500 dark:text-gray-400 mt-1">Campaign performance and financial analytics in ₹</p>
         </div>
         <div className="flex flex-wrap gap-3">

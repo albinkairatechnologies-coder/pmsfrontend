@@ -445,7 +445,7 @@ export default function LeavesPage() {
       {/* Header */}
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white tracking-tight flex items-center gap-2">
+          <h1 className="text-2xl md:text-3xl font-black text-gray-900 dark:text-white tracking-tight flex items-center gap-2">
             <FiCalendar className="text-primary-500" /> Leave Management
           </h1>
           <p className="text-sm text-gray-500 mt-0.5">Apply for leave and track your requests</p>

@@ -206,7 +206,7 @@ export default function DashboardPage() {
       )}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h1 className="text-2xl font-bold dark:text-white uppercase tracking-tight">Admin Dashboard</h1>
+          <h1 className="text-2xl md:text-3xl font-black dark:text-white uppercase tracking-tight">Admin Dashboard</h1>
           <p className="text-gray-500 text-xs mt-1">Hello, {user.name}</p>
         </div>
         <div className="w-full md:w-auto max-w-md">
@@ -333,7 +333,7 @@ export default function DashboardPage() {
       )}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-black text-shimmer">Team Dashboard</h1>
+          <h1 className="text-2xl md:text-3xl font-black text-shimmer">Team Dashboard</h1>
           <p className="text-gray-500 text-sm mt-1">Welcome back, {user.name}</p>
         </div>
         <div className="w-full md:w-auto max-w-md">
@@ -404,7 +404,7 @@ export default function DashboardPage() {
   /* ── Client ── */
   if (user?.role === 'client') return (
     <div className="p-6 space-y-6">
-      <h1 className="text-3xl font-black text-shimmer">Project Dashboard</h1>
+      <h1 className="text-2xl md:text-3xl font-black text-shimmer">Project Dashboard</h1>
       <GlowCard className="p-6" goldBorder>
         <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">{stats?.client?.company_name}</h2>
         <div className="grid grid-cols-2 gap-4 mb-6">
@@ -444,7 +444,7 @@ export default function DashboardPage() {
       )}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-black text-shimmer">My Dashboard</h1>
+          <h1 className="text-2xl md:text-3xl font-black text-shimmer">My Dashboard</h1>
           <p className="text-gray-500 text-sm mt-1">Welcome back, {user?.name}</p>
         </div>
         <div className="w-full md:w-auto max-w-md">

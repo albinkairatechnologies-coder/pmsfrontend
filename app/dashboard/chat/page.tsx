@@ -267,7 +267,7 @@ export default function ChatPage() {
         <div className="flex-1 flex flex-col bg-white dark:bg-surface-dark border border-gray-100 dark:border-white/5 rounded-3xl overflow-hidden shadow-xl shadow-black/5">
           <div className="p-4 border-b border-gray-100 dark:border-white/5">
             <div className="flex items-center justify-between mb-4">
-              <h1 className="text-xl font-black text-shimmer">Messenger</h1>
+              <h1 className="text-2xl md:text-3xl font-black text-shimmer">Messenger</h1>
               <button 
                 onClick={() => setShowCreateGroup(true)}
                 className="p-2 bg-primary-500/10 dark:bg-gold-500/10 text-primary-500 dark:text-gold-500 hover:bg-primary-500 dark:hover:bg-gold-500 hover:text-white dark:hover:text-darker rounded-xl transition-all"

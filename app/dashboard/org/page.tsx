@@ -138,7 +138,7 @@ export default function OrgPage() {
     <div className="animate-fade-in pb-20">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-10">
         <div>
-           <h1 className="text-2xl font-bold text-gray-900 dark:text-white uppercase tracking-tight">Organization</h1>
+           <h1 className="text-2xl md:text-3xl font-black text-gray-900 dark:text-white uppercase tracking-tight">Organization</h1>
            <p className="text-gray-500 dark:text-gray-400 text-xs mt-1">Manage teams, departments, and employee hierarchies.</p>
         </div>
         <div className="flex flex-wrap gap-3">

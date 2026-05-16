@@ -1,9 +1,10 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { FiBell } from 'react-icons/fi';
+import { FiBell, FiX } from 'react-icons/fi';
 import { notificationAPI, domainAPI } from '../utils/api';
 import { useAuth } from '../utils/AuthContext';
+import { motion, AnimatePresence } from 'framer-motion';
 
 const TYPE_COLORS: Record<string, string> = {
   leave_approved:      'text-emerald-400',
@@ -27,6 +28,7 @@ export default function NotificationBell() {
   const [notifications, setNotifications] = useState<any[]>([]);
   const [domainAlerts, setDomainAlerts]   = useState<any[]>([]);
   const [unread, setUnread]               = useState(0);
+  const [activeAlert, setActiveAlert]     = useState<any>(null);
   const ref = useRef<HTMLDivElement>(null);
   const lastUnreadRef = useRef(0);
   const [hasPermission, setHasPermission] = useState(false);
@@ -88,6 +90,8 @@ export default function NotificationBell() {
         const latest = nRes.data[0];
         if (!latest.is_read) {
           triggerDesktopNotification(latest.title, latest.message);
+          setActiveAlert(latest);
+          setTimeout(() => setActiveAlert(null), 5000);
         }
       }
 
@@ -181,6 +185,37 @@ export default function NotificationBell() {
           </div>
         </div>
       )}
+
+      {/* Global In-App Alert Dialog for any screen */}
+      <AnimatePresence>
+        {activeAlert && (
+          <motion.div
+            initial={{ opacity: 0, y: 50, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 20, scale: 0.9 }}
+            className="fixed bottom-6 right-6 z-[9999] bg-[#1e1e2e] border border-primary-500/30 rounded-2xl shadow-2xl p-4 w-80 overflow-hidden"
+          >
+            <div className="absolute top-0 left-0 w-1 h-full bg-primary-500" />
+            <div className="flex justify-between items-start gap-3">
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-black text-white truncate">{activeAlert.title}</p>
+                <p className="text-xs text-gray-400 mt-1 leading-relaxed break-words">{activeAlert.message}</p>
+              </div>
+              <button 
+                onClick={() => setActiveAlert(null)}
+                className="text-gray-500 hover:text-white transition-colors flex-shrink-0"
+              >
+                <FiX size={16} />
+              </button>
+            </div>
+            {activeAlert.link && (
+               <a href={activeAlert.link} className="block mt-3 text-[10px] font-black text-primary-400 hover:text-primary-300 uppercase tracking-widest">
+                 View Details &rarr;
+               </a>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

@@ -121,7 +121,7 @@ export default function ProfilePage() {
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
         <div>
-          <h1 className="text-3xl font-black text-shimmer uppercase tracking-tighter">My Profile</h1>
+          <h1 className="text-2xl md:text-3xl font-black text-shimmer uppercase tracking-tighter">My Profile</h1>
           <p className="text-gray-500 text-sm">Manage your personal information and security settings.</p>
         </div>
         {saved && (
