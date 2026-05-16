@@ -245,6 +245,23 @@ export default function InvoicesPage() {
       });
     };
 
+    const getBase64FromImage = (imgEl: HTMLImageElement | null): string => {
+      if (!imgEl) return '';
+      try {
+        const canvas = document.createElement('canvas');
+        // Ensure we capture full natural resolution of already-rendered graphic
+        canvas.width = imgEl.naturalWidth || imgEl.width || 800;
+        canvas.height = imgEl.naturalHeight || imgEl.height || 200;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return '';
+        ctx.drawImage(imgEl, 0, 0);
+        return canvas.toDataURL('image/png');
+      } catch (e) {
+        console.error("Direct canvas capture failed:", e);
+        return '';
+      }
+    };
+
     const opt = {
       margin: [1.75, 0, 1.25, 0], // Dynamically inject physical [top, left, bottom, right] gaps in inches on EVERY sliced page
       filename: `Invoice_${inv.invoice_number || 'record'}.pdf`,
@@ -257,13 +274,28 @@ export default function InvoicesPage() {
     const runSave = async () => {
       const html2pdf = (window as any).html2pdf;
 
-      // 1. Load Base64 Data URIs for the letterheads from internal /public folder
-      let topData = '', bottomData = '';
-      try {
-        topData = await getBase64FromUrl('/letterpadtop.png');
-        bottomData = await getBase64FromUrl('/letterpadbottom.png');
-      } catch (e) {
-        console.error("Error fetching letterpad assets:", e);
+      // 1. Bypassing Network Routes: Extract loaded Image binaries directly from the active DOM canvas!
+      // This ensures 100% immunity against custom subdirectories or reverse-proxy routing on DigitalOcean!
+      const topImgEl = element.querySelector('.letterhead-top-fixed') as HTMLImageElement | null;
+      const botImgEl = element.querySelector('.letterhead-bottom-fixed') as HTMLImageElement | null;
+
+      let topData = getBase64FromImage(topImgEl);
+      let bottomData = getBase64FromImage(botImgEl);
+
+      // Secondary Network Fallback if DOM extraction is blocked by Security Policies
+      if (!topData) {
+        try {
+          topData = await getBase64FromUrl(topImgEl?.src || '/letterpadtop.png');
+        } catch (e) {
+          console.error("Letterhead top network fallback failed:", e);
+        }
+      }
+      if (!bottomData) {
+        try {
+          bottomData = await getBase64FromUrl(botImgEl?.src || '/letterpadbottom.png');
+        } catch (e) {
+          console.error("Letterhead bottom network fallback failed:", e);
+        }
       }
 
       // 2. Get original DOM styling and temporarily force fully visible auto-height expansion with locked width to prevent content shifting
