@@ -178,6 +178,7 @@ export default function InvoicesPage() {
         tax_percent: 18.00,
         notes: '',
         payment_terms: 'Payable within 14 days via UPI, Net Banking, or GPay.',
+        invoice_type: 'with_gst',
       });
       setLineItems([{ description: '', quantity: 1, unit_price: 0, total: 0 }]);
       fetchInvoices();
