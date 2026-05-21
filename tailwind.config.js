@@ -1,0 +1,66 @@
+/** @type {import('tailwindcss').Config} */
+module.exports = {
+  content: [
+    './pages/**/*.{js,ts,jsx,tsx,mdx}',
+    './components/**/*.{js,ts,jsx,tsx,mdx}',
+    './app/**/*.{js,ts,jsx,tsx,mdx}',
+  ],
+  darkMode: 'class',
+  theme: {
+    extend: {
+      colors: {
+        primary: { DEFAULT: '#6366F1', 50: '#EEF2FF', 100: '#E0E7FF', 400: '#818CF8', 500: '#6366F1', 600: '#4F46E5', 700: '#4338CA' },
+        secondary: { DEFAULT: '#8B5CF6', 500: '#8B5CF6', 600: '#7C3AED' },
+        accent: { DEFAULT: '#06B6D4', 500: '#06B6D4', 600: '#0891B2' },
+        gold: { DEFAULT: '#F5C842', 300: '#FDE68A', 400: '#FBBF24', 500: '#F5C842', 600: '#D97706' },
+        neon: { purple: '#A855F7', blue: '#3B82F6', gold: '#F5C842', green: '#10B981', pink: '#EC4899' },
+        success: '#10B981',
+        warning: '#F59E0B',
+        danger: '#EF4444',
+        surface: { DEFAULT: '#FFFFFF', dark: '#1E2433' },
+        'dark-card': '#1E2433',
+        dark: '#1F2937',
+        darker: '#0F1117',
+        sidebar: { DEFAULT: '#0F1117', border: '#1E2433' },
+      },
+      fontFamily: {
+        sans: ['Inter', 'system-ui', 'sans-serif'],
+      },
+      boxShadow: {
+        card: '0 1px 3px 0 rgba(0,0,0,.07), 0 1px 2px -1px rgba(0,0,0,.07)',
+        'card-hover': '0 4px 16px 0 rgba(99,102,241,.15)',
+        glow: '0 0 0 3px rgba(99,102,241,.25)',
+        modal: '0 25px 50px -12px rgba(0,0,0,.35)',
+        'glow-gold': '0 0 24px 4px rgba(245,200,66,.35), 0 0 60px 8px rgba(245,200,66,.12)',
+        'glow-purple': '0 0 24px 4px rgba(168,85,247,.35), 0 0 60px 8px rgba(168,85,247,.12)',
+        'glow-blue': '0 0 24px 4px rgba(99,102,241,.4), 0 0 60px 8px rgba(99,102,241,.15)',
+        'neon-border': '0 0 8px rgba(245,200,66,.6), inset 0 0 8px rgba(245,200,66,.1)',
+        'card-3d': '0 20px 60px -10px rgba(0,0,0,.5), 0 0 40px rgba(245,200,66,.08)',
+      },
+      borderRadius: {
+        xl: '0.875rem',
+        '2xl': '1.25rem',
+      },
+      animation: {
+        'fade-in': 'fadeIn .2s ease-out',
+        'slide-up': 'slideUp .25s ease-out',
+        'zoom-in': 'zoomIn .2s ease-out',
+        'spin-slow': 'spin 1.5s linear infinite',
+        'pulse-gold': 'pulseGold 2.5s ease-in-out infinite',
+        'float': 'float 6s ease-in-out infinite',
+        'shimmer': 'shimmer 2.5s linear infinite',
+        'border-glow': 'borderGlow 3s ease-in-out infinite',
+      },
+      keyframes: {
+        fadeIn: { from: { opacity: 0 }, to: { opacity: 1 } },
+        slideUp: { from: { opacity: 0, transform: 'translateY(12px)' }, to: { opacity: 1, transform: 'translateY(0)' } },
+        zoomIn: { from: { opacity: 0, transform: 'scale(0.95)' }, to: { opacity: 1, transform: 'scale(1)' } },
+        pulseGold: { '0%,100%': { boxShadow: '0 0 20px 2px rgba(245,200,66,.3)' }, '50%': { boxShadow: '0 0 40px 8px rgba(245,200,66,.6)' } },
+        float: { '0%,100%': { transform: 'translateY(0px)' }, '50%': { transform: 'translateY(-10px)' } },
+        shimmer: { '0%': { backgroundPosition: '-200% center' }, '100%': { backgroundPosition: '200% center' } },
+        borderGlow: { '0%,100%': { borderColor: 'rgba(245,200,66,.3)' }, '50%': { borderColor: 'rgba(245,200,66,.8)' } },
+      },
+    },
+  },
+  plugins: [],
+}
