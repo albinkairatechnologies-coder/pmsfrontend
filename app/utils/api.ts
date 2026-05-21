@@ -130,13 +130,14 @@ export const taskAPI = {
   removeObserver: (id: number, userId: number) => api.delete(`/tasks/${id}/observers/${userId}`),
   deleteMessage: (taskId: number, msgId: number) => api.delete(`/tasks/${taskId}/messages/delete/${msgId}`),
   editMessage: (taskId: number, msgId: number, content: string) => api.put(`/tasks/${taskId}/messages/edit/${msgId}`, { content }),
-  
+  getMyCount:     () => api.get('/tasks/my-count'),
+
   // Subtasks API
   getSubtasks: (taskId: number) => api.get(`/tasks/${taskId}/subtasks`),
   createSubtask: (taskId: number, data: any) => api.post(`/tasks/${taskId}/subtasks`, data),
   updateSubtask: (taskId: number, subtaskId: number, data: any) => api.put(`/tasks/${taskId}/subtasks/${subtaskId}`, data),
   deleteSubtask: (taskId: number, subtaskId: number) => api.delete(`/tasks/${taskId}/subtasks/${subtaskId}`),
-  
+
   // Pipeline API
   getPipeline: (taskId: number) => api.get(`/tasks/${taskId}/pipeline`),
   updatePipelineStage: (taskId: number, stageName: string, data: any) => api.put(`/tasks/${taskId}/pipeline/${stageName}`, data),
@@ -332,19 +333,20 @@ export const documentAPI = {
 };
 
 export const announcementAPI = {
-  getAll:      () => api.get('/announcements'),
-  create:      (data: any) => api.post('/announcements', data),
-  update:      (id: number, data: any) => api.put(`/announcements/${id}`, data),
-  delete:      (id: number) => api.delete(`/announcements/${id}`),
-  getComments: (id: number) => api.get(`/announcements/${id}/comments`),
-  addComment:  (id: number, content: string) => api.post(`/announcements/${id}/comments`, { content }),
-  toggleLike:  (id: number) => api.post(`/announcements/${id}/like`),
-  recordView:  (id: number) => api.post(`/announcements/${id}/view`),
-  getViewers:  (id: number) => api.get(`/announcements/${id}/viewers`),
-  togglePin:   (id: number) => api.post(`/announcements/${id}/pin`),
-  votePoll:    (id: number, optionIndex: number) => api.post(`/announcements/${id}/vote`, { option_index: optionIndex }),
-  deleteComment: (commentId: number) => api.delete(`/comments/${commentId}`),
-  updateComment: (commentId: number, content: string) => api.put(`/comments/${commentId}`, { content }),
+  getAll:         () => api.get('/announcements'),
+  getUnreadCount: () => api.get('/announcements/unread-count'),
+  create:         (data: any) => api.post('/announcements', data),
+  update:         (id: number, data: any) => api.put(`/announcements/${id}`, data),
+  delete:         (id: number) => api.delete(`/announcements/${id}`),
+  getComments:    (id: number) => api.get(`/announcements/${id}/comments`),
+  addComment:     (id: number, content: string) => api.post(`/announcements/${id}/comments`, { content }),
+  toggleLike:     (id: number) => api.post(`/announcements/${id}/like`),
+  recordView:     (id: number) => api.post(`/announcements/${id}/view`),
+  getViewers:     (id: number) => api.get(`/announcements/${id}/viewers`),
+  togglePin:      (id: number) => api.post(`/announcements/${id}/pin`),
+  votePoll:       (id: number, optionIndex: number) => api.post(`/announcements/${id}/vote`, { option_index: optionIndex }),
+  deleteComment:  (commentId: number) => api.delete(`/comments/${commentId}`),
+  updateComment:  (commentId: number, content: string) => api.put(`/comments/${commentId}`, { content }),
 };
 
 export const calendarAPI = {

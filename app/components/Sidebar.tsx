@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation';
 import { FiHome, FiUsers, FiCheckSquare, FiClock, FiBarChart2, FiLogOut, FiMoon, FiSun, FiGrid, FiSettings, FiCalendar, FiActivity, FiUmbrella, FiShield, FiMessageSquare, FiPieChart, FiChevronDown, FiChevronRight, FiDollarSign, FiUser, FiGlobe, FiFolder, FiTrendingUp, FiHardDrive, FiX, FiFileText } from 'react-icons/fi';
 import { useAuth } from '../utils/AuthContext';
 import { useState, useEffect } from 'react';
-import { domainAPI } from '../utils/api';
+import { domainAPI, announcementAPI, taskAPI } from '../utils/api';
 
 const ROLE_COLORS: Record<string, string> = {
   admin: 'bg-red-500/20 text-red-400 border-red-500/30',
@@ -27,20 +27,33 @@ export default function Sidebar({ isOpen, setIsOpen }: { isOpen: boolean, setIsO
   const [darkMode, setDarkMode] = useState(false);
   const [expandedMenus, setExpandedMenus] = useState<string[]>([]);
   const [domainAlertCount, setDomainAlertCount] = useState(0);
+  const [taskCount, setTaskCount] = useState(0);
+  const [announcementCount, setAnnouncementCount] = useState(0);
 
   useEffect(() => {
-    if (user && ['admin', 'crm_head', 'marketing_head', 'team_lead'].includes(user.role)) {
+    if (!user) return;
+    // Domain alerts (admin/leads only)
+    if (['admin', 'crm_head', 'marketing_head', 'team_lead'].includes(user.role)) {
       domainAPI.getAlerts().then(r => setDomainAlertCount(r.data.total_alerts)).catch(() => {});
-      const t = setInterval(() => {
-        domainAPI.getAlerts().then(r => setDomainAlertCount(r.data.total_alerts)).catch(() => {});
-      }, 60000);
-      return () => clearInterval(t);
     }
+    // Task count for all roles
+    taskAPI.getMyCount().then(r => setTaskCount(r.data.count)).catch(() => {});
+    // Announcement unread count for all roles
+    announcementAPI.getUnreadCount().then(r => setAnnouncementCount(r.data.count)).catch(() => {});
+
+    const t = setInterval(() => {
+      if (['admin', 'crm_head', 'marketing_head', 'team_lead'].includes(user.role)) {
+        domainAPI.getAlerts().then(r => setDomainAlertCount(r.data.total_alerts)).catch(() => {});
+      }
+      taskAPI.getMyCount().then(r => setTaskCount(r.data.count)).catch(() => {});
+      announcementAPI.getUnreadCount().then(r => setAnnouncementCount(r.data.count)).catch(() => {});
+    }, 60000);
+    return () => clearInterval(t);
   }, [user]);
 
   const navItems = [
     { href: '/dashboard', icon: FiHome, label: 'Dashboard', roles: ['admin', 'marketing_head', 'developer', 'smm', 'crm_head', 'client', 'team_lead', 'employee'] },
-    { href: '/dashboard/announcements', icon: FiGlobe, label: 'Announcements', roles: ['admin', 'marketing_head', 'developer', 'smm', 'crm_head', 'client', 'team_lead', 'employee'] },
+    { href: '/dashboard/announcements', icon: FiGlobe, label: 'Announcements', roles: ['admin', 'marketing_head', 'developer', 'smm', 'crm_head', 'client', 'team_lead', 'employee'], alert: announcementCount },
     { 
       label: 'Attendance', 
       icon: FiCalendar, 
@@ -69,7 +82,7 @@ export default function Sidebar({ isOpen, setIsOpen }: { isOpen: boolean, setIsO
     { href: '/dashboard/reports', icon: FiBarChart2, label: 'Reports', roles: ['admin', 'marketing_head', 'crm_head', 'team_lead'] },
     { href: '/dashboard/salary', icon: FiDollarSign, label: 'Salary', roles: ['admin', 'marketing_head'] },
     { href: '/dashboard/settings', icon: FiSettings, label: 'Settings', roles: ['admin'] },
-    { href: '/dashboard/tasks', icon: FiCheckSquare, label: 'Tasks', roles: ['admin', 'marketing_head', 'developer', 'smm', 'crm_head', 'team_lead', 'employee'] },
+    { href: '/dashboard/tasks', icon: FiCheckSquare, label: 'Tasks', roles: ['admin', 'marketing_head', 'developer', 'smm', 'crm_head', 'team_lead', 'employee'], alert: taskCount },
     { href: '/dashboard/worklogs', icon: FiClock, label: 'Work Logs', roles: ['admin', 'marketing_head', 'developer', 'smm', 'crm_head', 'team_lead', 'employee'] },
   ];
 
