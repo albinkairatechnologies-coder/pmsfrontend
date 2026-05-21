@@ -8,15 +8,18 @@ import { useState, useEffect } from 'react';
 import { domainAPI, announcementAPI, taskAPI } from '../utils/api';
 
 const ROLE_COLORS: Record<string, string> = {
-  admin: 'bg-red-500/20 text-red-400 border-red-500/30',
+  admin:          'bg-red-500/20 text-red-400 border-red-500/30',
+  bdm:            'bg-amber-500/20 text-amber-400 border-amber-500/30',
   marketing_head: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
-  team_lead: 'bg-purple-500/20 text-purple-400 border-purple-500/30',
-  crm:          'bg-pink-500/20 text-pink-400 border-pink-500/30',
-  crm_head:      'bg-rose-500/20 text-rose-400 border-rose-500/30',
-  developer: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30',
-  smm: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30',
-  employee: 'bg-gray-500/20 text-gray-400 border-gray-500/30',
-  client: 'bg-orange-500/20 text-orange-400 border-orange-500/30',
+  team_lead:      'bg-purple-500/20 text-purple-400 border-purple-500/30',
+  crm:            'bg-pink-500/20 text-pink-400 border-pink-500/30',
+  crm_head:       'bg-rose-500/20 text-rose-400 border-rose-500/30',
+  developer:      'bg-emerald-500/20 text-emerald-400 border-emerald-500/30',
+  smm:            'bg-yellow-500/20 text-yellow-400 border-yellow-500/30',
+  video_editor:   'bg-violet-500/20 text-violet-400 border-violet-500/30',
+  designer:       'bg-fuchsia-500/20 text-fuchsia-400 border-fuchsia-500/30',
+  employee:       'bg-gray-500/20 text-gray-400 border-gray-500/30',
+  client:         'bg-orange-500/20 text-orange-400 border-orange-500/30',
 };
 
 const AVATAR_COLORS = ['bg-indigo-500', 'bg-purple-500', 'bg-pink-500', 'bg-emerald-500', 'bg-amber-500', 'bg-cyan-500'];
@@ -33,7 +36,7 @@ export default function Sidebar({ isOpen, setIsOpen }: { isOpen: boolean, setIsO
   useEffect(() => {
     if (!user) return;
     // Domain alerts (admin/leads only)
-    if (['admin', 'crm_head', 'marketing_head', 'team_lead'].includes(user.role)) {
+    if (['admin', 'bdm', 'crm_head', 'marketing_head', 'team_lead'].includes(user.role)) {
       domainAPI.getAlerts().then(r => setDomainAlertCount(r.data.total_alerts)).catch(() => {});
     }
     // Task count for all roles
@@ -42,7 +45,7 @@ export default function Sidebar({ isOpen, setIsOpen }: { isOpen: boolean, setIsO
     announcementAPI.getUnreadCount().then(r => setAnnouncementCount(r.data.count)).catch(() => {});
 
     const t = setInterval(() => {
-      if (['admin', 'crm_head', 'marketing_head', 'team_lead'].includes(user.role)) {
+      if (['admin', 'bdm', 'crm_head', 'marketing_head', 'team_lead'].includes(user.role)) {
         domainAPI.getAlerts().then(r => setDomainAlertCount(r.data.total_alerts)).catch(() => {});
       }
       taskAPI.getMyCount().then(r => setTaskCount(r.data.count)).catch(() => {});
@@ -52,38 +55,38 @@ export default function Sidebar({ isOpen, setIsOpen }: { isOpen: boolean, setIsO
   }, [user]);
 
   const navItems = [
-    { href: '/dashboard', icon: FiHome, label: 'Dashboard', roles: ['admin', 'marketing_head', 'developer', 'smm', 'crm_head', 'client', 'team_lead', 'employee'] },
-    { href: '/dashboard/announcements', icon: FiGlobe, label: 'Announcements', roles: ['admin', 'marketing_head', 'developer', 'smm', 'crm_head', 'client', 'team_lead', 'employee'], alert: announcementCount },
+    { href: '/dashboard', icon: FiHome, label: 'Dashboard', roles: ['admin', 'bdm', 'marketing_head', 'developer', 'smm', 'video_editor', 'designer', 'crm_head', 'crm', 'client', 'team_lead', 'employee'] },
+    { href: '/dashboard/announcements', icon: FiGlobe, label: 'Announcements', roles: ['admin', 'bdm', 'marketing_head', 'developer', 'smm', 'video_editor', 'designer', 'crm_head', 'crm', 'client', 'team_lead', 'employee'], alert: announcementCount },
     { 
       label: 'Attendance', 
       icon: FiCalendar, 
-      roles: ['admin', 'marketing_head', 'developer', 'smm', 'crm_head', 'team_lead', 'employee'],
+      roles: ['admin', 'bdm', 'marketing_head', 'developer', 'smm', 'video_editor', 'designer', 'crm_head', 'crm', 'team_lead', 'employee'],
       subItems: [
         { href: '/dashboard/attendance', label: 'Mark Attendance' },
         { href: '/dashboard/calendar', label: 'Calendar' },
       ]
     },
-    { href: '/dashboard/clients', icon: FiUsers, label: 'Clients', roles: ['admin', 'crm_head', 'marketing_head', 'team_lead'] },
-    { href: '/dashboard/invoices', icon: FiFileText, label: 'Invoices', roles: ['admin', 'crm_head', 'marketing_head', 'team_lead'] },
-    { href: '/dashboard/documents', icon: FiFolder, label: 'Documents', roles: ['admin', 'marketing_head', 'developer', 'smm', 'crm_head', 'team_lead', 'employee'] },
-    { href: '/dashboard/domains', icon: FiGlobe, label: 'Domains', roles: ['admin', 'crm_head', 'marketing_head', 'team_lead'], alert: domainAlertCount },
-    { href: '/dashboard/eod', icon: FiClock, label: 'EOD Report', roles: ['admin', 'marketing_head', 'developer', 'smm', 'crm_head', 'team_lead', 'employee'] },
-    { href: '/dashboard/feedback', icon: FiMessageSquare, label: 'Feedback', roles: ['admin', 'marketing_head', 'developer', 'smm', 'crm_head', 'team_lead', 'employee'] },
-    { href: '/dashboard/finance', icon: FiDollarSign, label: 'Finance', roles: ['admin', 'crm_head', 'marketing_head'] },
-    { href: '/dashboard/gdrive', icon: FiHardDrive, label: 'Google Drive', roles: ['admin', 'marketing_head', 'developer', 'smm', 'crm_head', 'team_lead', 'employee', 'crm'] },
-    { href: '/dashboard/analytics', icon: FiPieChart, label: 'HR Analytics', roles: ['admin', 'marketing_head', 'crm_head', 'team_lead'] },
-    { href: '/dashboard/leaves', icon: FiUmbrella, label: 'Leave', roles: ['admin', 'marketing_head', 'developer', 'smm', 'crm_head', 'team_lead', 'employee'] },
-    { href: '/dashboard/leads', icon: FiTrendingUp, label: 'Leads', roles: ['admin', 'crm_head', 'marketing_head', 'smm'] },
-    { href: '/dashboard/activity', icon: FiActivity, label: 'Live Monitor', roles: ['admin', 'marketing_head'] },
-    { href: '/dashboard/chat', icon: FiMessageSquare, label: 'Messenger', roles: ['admin', 'marketing_head', 'developer', 'smm', 'crm_head', 'client', 'team_lead', 'employee'] },
-    { href: '/dashboard/profile', icon: FiUser, label: 'My Profile', roles: ['admin', 'marketing_head', 'developer', 'smm', 'crm_head', 'client', 'team_lead', 'employee'] },
+    { href: '/dashboard/clients', icon: FiUsers, label: 'Clients', roles: ['admin', 'bdm', 'crm_head', 'marketing_head', 'team_lead'] },
+    { href: '/dashboard/invoices', icon: FiFileText, label: 'Invoices', roles: ['admin', 'bdm', 'crm_head', 'marketing_head'] },
+    { href: '/dashboard/documents', icon: FiFolder, label: 'Documents', roles: ['admin', 'bdm', 'marketing_head', 'developer', 'smm', 'video_editor', 'designer', 'crm_head', 'crm', 'team_lead', 'employee'] },
+    { href: '/dashboard/domains', icon: FiGlobe, label: 'Domains', roles: ['admin', 'bdm', 'crm_head', 'marketing_head', 'team_lead'], alert: domainAlertCount },
+    { href: '/dashboard/eod', icon: FiClock, label: 'EOD Report', roles: ['admin', 'bdm', 'marketing_head', 'developer', 'smm', 'video_editor', 'designer', 'crm_head', 'crm', 'team_lead', 'employee'] },
+    { href: '/dashboard/feedback', icon: FiMessageSquare, label: 'Feedback', roles: ['admin', 'bdm', 'marketing_head', 'developer', 'smm', 'video_editor', 'designer', 'crm_head', 'crm', 'team_lead', 'employee'] },
+    { href: '/dashboard/finance', icon: FiDollarSign, label: 'Finance', roles: ['admin', 'bdm', 'crm_head', 'marketing_head'] },
+    { href: '/dashboard/gdrive', icon: FiHardDrive, label: 'Google Drive', roles: ['admin', 'bdm', 'marketing_head', 'developer', 'smm', 'video_editor', 'designer', 'crm_head', 'crm', 'team_lead', 'employee'] },
+    { href: '/dashboard/analytics', icon: FiPieChart, label: 'HR Analytics', roles: ['admin', 'bdm', 'marketing_head', 'crm_head', 'team_lead'] },
+    { href: '/dashboard/leaves', icon: FiUmbrella, label: 'Leave', roles: ['admin', 'bdm', 'marketing_head', 'developer', 'smm', 'video_editor', 'designer', 'crm_head', 'crm', 'team_lead', 'employee'] },
+    { href: '/dashboard/leads', icon: FiTrendingUp, label: 'Leads', roles: ['admin', 'bdm', 'crm_head', 'marketing_head', 'smm', 'crm'] },
+    { href: '/dashboard/activity', icon: FiActivity, label: 'Live Monitor', roles: ['admin', 'bdm', 'marketing_head'] },
+    { href: '/dashboard/chat', icon: FiMessageSquare, label: 'Messenger', roles: ['admin', 'bdm', 'marketing_head', 'developer', 'smm', 'video_editor', 'designer', 'crm_head', 'crm', 'client', 'team_lead', 'employee'] },
+    { href: '/dashboard/profile', icon: FiUser, label: 'My Profile', roles: ['admin', 'bdm', 'marketing_head', 'developer', 'smm', 'video_editor', 'designer', 'crm_head', 'crm', 'client', 'team_lead', 'employee'] },
     { href: '/dashboard/org', icon: FiGrid, label: 'Organization', roles: ['admin'] },
-    { href: '/dashboard/permissions', icon: FiShield, label: 'Permissions', roles: ['admin', 'marketing_head', 'developer', 'smm', 'crm_head', 'team_lead', 'employee'] },
-    { href: '/dashboard/reports', icon: FiBarChart2, label: 'Reports', roles: ['admin', 'marketing_head', 'crm_head', 'team_lead'] },
-    { href: '/dashboard/salary', icon: FiDollarSign, label: 'Salary', roles: ['admin', 'marketing_head'] },
+    { href: '/dashboard/permissions', icon: FiShield, label: 'Permissions', roles: ['admin', 'bdm', 'marketing_head', 'developer', 'smm', 'video_editor', 'designer', 'crm_head', 'crm', 'team_lead', 'employee'] },
+    { href: '/dashboard/reports', icon: FiBarChart2, label: 'Reports', roles: ['admin', 'bdm', 'marketing_head', 'crm_head', 'team_lead'] },
+    { href: '/dashboard/salary', icon: FiDollarSign, label: 'Salary', roles: ['admin', 'bdm', 'marketing_head'] },
     { href: '/dashboard/settings', icon: FiSettings, label: 'Settings', roles: ['admin'] },
-    { href: '/dashboard/tasks', icon: FiCheckSquare, label: 'Tasks', roles: ['admin', 'marketing_head', 'developer', 'smm', 'crm_head', 'team_lead', 'employee'], alert: taskCount },
-    { href: '/dashboard/worklogs', icon: FiClock, label: 'Work Logs', roles: ['admin', 'marketing_head', 'developer', 'smm', 'crm_head', 'team_lead', 'employee'] },
+    { href: '/dashboard/tasks', icon: FiCheckSquare, label: 'Tasks', roles: ['admin', 'bdm', 'marketing_head', 'developer', 'smm', 'video_editor', 'designer', 'crm_head', 'crm', 'team_lead', 'employee'], alert: taskCount },
+    { href: '/dashboard/worklogs', icon: FiClock, label: 'Work Logs', roles: ['admin', 'bdm', 'marketing_head', 'developer', 'smm', 'video_editor', 'designer', 'crm_head', 'crm', 'team_lead', 'employee'] },
   ];
 
   const filteredNavItems = navItems.filter(item => item.roles.includes(user?.role || ''));
