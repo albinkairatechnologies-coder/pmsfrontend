@@ -385,7 +385,7 @@ export const eodAPI = {
   getMy:    (params?: any) => api.get('/eod/my', { params }),
   getByDate:(date: string) => api.get('/eod/date', { params: { date } }),
   edit:     (data: any)   => api.post('/eod/edit', data),
-  getAdmin: (params?: any) => api.get('/eod/admin', { params }),
+  getAdmin: (params?: any) => api.get('/eod/admin', { params: typeof params === 'string' ? { date: params } : params }),
 };
 
 export const domainAPI = {

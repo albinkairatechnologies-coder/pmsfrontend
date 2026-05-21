@@ -272,6 +272,15 @@ export default function ClientsPage() {
                   </div>
                 ))}
               </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Team Members</label>
+                <select multiple value={formData.team_members.map(String)} className="input h-28"
+                  onChange={e => setFormData({ ...formData, team_members: Array.from(e.target.selectedOptions, o => parseInt(o.value)) })}>
+                  {users.map(u => <option key={u.id} value={u.id}>{u.name} ({u.role})</option>)}
+                </select>
+              </div>
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Notes</label>
                 <textarea className="input h-20 resize-none" value={formData.notes}
