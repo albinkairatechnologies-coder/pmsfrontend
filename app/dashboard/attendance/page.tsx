@@ -80,6 +80,14 @@ export default function AttendancePage() {
   const timerRef      = useRef<any>(null);
   const breakTimerRef = useRef<any>(null);
 
+  const getAssetPath = (path: string | null) => {
+    if (!path) return '';
+    if (typeof window !== 'undefined' && window.location.pathname.startsWith('/pms')) {
+      return `/pms${path}`;
+    }
+    return path;
+  };
+
   const loadToday = useCallback(async () => {
     try {
       const res = await attendanceAPI.getToday();
@@ -466,7 +474,7 @@ export default function AttendancePage() {
           {/* Left Column: Image Thumbnail */}
           <div className="relative w-16 h-16 rounded-xl overflow-hidden flex-shrink-0 border border-gray-100 dark:border-white/10 bg-gray-50 dark:bg-darker shadow-inner">
             <img 
-              src={showImage} 
+              src={getAssetPath(showImage)} 
               alt="Status" 
               className="w-full h-full object-cover" 
             />

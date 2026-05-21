@@ -76,6 +76,14 @@ export default function DashboardPage() {
   const [attendance, setAttendance] = useState<any>(null);
   const [showImage, setShowImage] = useState<string | null>(null);
 
+  const getAssetPath = (path: string | null) => {
+    if (!path) return '';
+    if (typeof window !== 'undefined' && window.location.pathname.startsWith('/pms')) {
+      return `/pms${path}`;
+    }
+    return path;
+  };
+
   const fetchAttendance = async () => {
     try {
       const res = await attendanceAPI.getToday();
@@ -227,7 +235,7 @@ export default function DashboardPage() {
           {/* Left Column: Image Thumbnail */}
           <div className="relative w-16 h-16 rounded-xl overflow-hidden flex-shrink-0 border border-gray-100 dark:border-white/10 bg-gray-50 dark:bg-darker shadow-inner">
             <img 
-              src={showImage} 
+              src={getAssetPath(showImage)} 
               alt="Status" 
               className="w-full h-full object-cover" 
             />
@@ -406,7 +414,7 @@ export default function DashboardPage() {
           {/* Left Column: Image Thumbnail */}
           <div className="relative w-16 h-16 rounded-xl overflow-hidden flex-shrink-0 border border-gray-100 dark:border-white/10 bg-gray-50 dark:bg-darker shadow-inner">
             <img 
-              src={showImage} 
+              src={getAssetPath(showImage)} 
               alt="Status" 
               className="w-full h-full object-cover" 
             />
@@ -569,7 +577,7 @@ export default function DashboardPage() {
           {/* Left Column: Image Thumbnail */}
           <div className="relative w-16 h-16 rounded-xl overflow-hidden flex-shrink-0 border border-gray-100 dark:border-white/10 bg-gray-50 dark:bg-darker shadow-inner">
             <img 
-              src={showImage} 
+              src={getAssetPath(showImage)} 
               alt="Status" 
               className="w-full h-full object-cover" 
             />
