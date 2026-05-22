@@ -109,9 +109,10 @@ export default function TaskDetailPage() {
   const [selectedStage, setSelectedStage] = useState<any>(null);
   const [editStartDate, setEditStartDate] = useState('');
   const [editEndDate, setEditEndDate] = useState('');
-  const [editResponsible, setEditResponsible] = useState<string | number>('');
+  const [editResponsible, setEditResponsible] = useState<string>('');
   const [editStatus, setEditStatus] = useState('pending');
   const [isSavingStage, setIsSavingStage] = useState(false);
+  const prevStageNameRef = useRef<string>('');
 
   useEffect(() => {
     loadTask();
@@ -137,10 +138,16 @@ export default function TaskDetailPage() {
   // Sync edit form fields when active pipeline stage tab changes
   useEffect(() => {
     if (selectedStage) {
-      setEditStartDate(selectedStage.start_date ? selectedStage.start_date.split('T')[0] : '');
-      setEditEndDate(selectedStage.end_date ? selectedStage.end_date.split('T')[0] : '');
-      setEditResponsible(selectedStage.responsible_person_id || '');
-      setEditStatus(selectedStage.status || 'pending');
+      const stageName = selectedStage.stage_name;
+      if (prevStageNameRef.current !== stageName) {
+        setEditStartDate(selectedStage.start_date ? selectedStage.start_date.split('T')[0] : '');
+        setEditEndDate(selectedStage.end_date ? selectedStage.end_date.split('T')[0] : '');
+        setEditResponsible(selectedStage.responsible_person_id ? String(selectedStage.responsible_person_id) : '');
+        setEditStatus(selectedStage.status || 'pending');
+        prevStageNameRef.current = stageName;
+      }
+    } else {
+      prevStageNameRef.current = '';
     }
   }, [selectedStage]);
 
@@ -199,9 +206,10 @@ export default function TaskDetailPage() {
       await taskAPI.updatePipelineStage(Number(id), selectedStage.stage_name, {
         start_date: editStartDate || null,
         end_date: editEndDate || null,
-        responsible_person_id: editResponsible || null,
+        responsible_person_id: editResponsible ? Number(editResponsible) : null,
         status: editStatus
       });
+      prevStageNameRef.current = '';
       await loadPipeline();
       await loadTask();
       await loadMessages();
@@ -557,7 +565,7 @@ export default function TaskDetailPage() {
                 <div className="flex items-start group">
                     <span className="w-24 text-[12px] font-medium text-gray-400 dark:text-gray-500 pt-1.5 flex-shrink-0">Deadline:</span>
                     <div className="flex flex-col gap-1.5 flex-1">
-                        {['admin', 'team_lead', 'crm_head', 'marketing_head', 'crm'].includes(user?.role || '') ? (
+                        {['admin', 'team_lead', 'crm_head', 'marketing_head', 'bdm'].includes(user?.role || '') ? (
                             <div className="flex items-center gap-2 relative">
                                 <FiCalendar size={14} className="text-red-500 dark:text-red-400 absolute left-2.5 z-10 pointer-events-none" />
                                 <input 
@@ -1014,7 +1022,7 @@ export default function TaskDetailPage() {
                    </div>
 
                    {/* Delete action */}
-                   {['admin', 'team_lead', 'crm_head', 'marketing_head', 'crm'].includes(user?.role || '') && (
+                   {['admin', 'team_lead', 'crm_head', 'marketing_head', 'bdm'].includes(user?.role || '') && (
                      <button onClick={() => handleDeleteSubtask(sub.id)} className="text-gray-400 hover:text-red-500 p-1 opacity-0 group-hover:opacity-100 transition-opacity">
                        <FiTrash2 size={13}/>
                      </button>
@@ -1250,7 +1258,7 @@ export default function TaskDetailPage() {
                       </h4>
                     </div>
 
-                    {!['admin', 'team_lead', 'crm_head', 'marketing_head', 'crm'].includes(user?.role || '') ? (
+                    {!['admin', 'team_lead', 'crm_head', 'marketing_head', 'bdm'].includes(user?.role || '') ? (
                       <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-gray-100 dark:bg-white/5 text-[10px] font-bold text-gray-500 dark:text-gray-400">
                         🔒 Read-only View
                       </span>
@@ -1269,7 +1277,7 @@ export default function TaskDetailPage() {
                       <div>
                         <label className="block text-[11px] font-bold text-gray-400 dark:text-gray-500 mb-1.5 uppercase tracking-wide">Execution Status</label>
                         <select 
-                          disabled={!['admin', 'team_lead', 'crm_head', 'marketing_head', 'crm'].includes(user?.role || '')}
+                          disabled={!['admin', 'team_lead', 'crm_head', 'marketing_head', 'bdm'].includes(user?.role || '')}
                           value={editStatus}
                           onChange={e => setEditStatus(e.target.value)}
                           className="w-full p-2.5 text-[12px] font-bold text-gray-700 dark:text-gray-200 bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl outline-none focus:border-indigo-500 dark:focus:border-indigo-400 transition-colors dark:text-white dark:bg-[#1C1F2E]"
@@ -1284,14 +1292,14 @@ export default function TaskDetailPage() {
                       <div>
                         <label className="block text-[11px] font-bold text-gray-400 dark:text-gray-500 mb-1.5 uppercase tracking-wide">Responsible Owner</label>
                         <select 
-                          disabled={!['admin', 'team_lead', 'crm_head', 'marketing_head', 'crm'].includes(user?.role || '')}
+                          disabled={!['admin', 'team_lead', 'crm_head', 'marketing_head', 'bdm'].includes(user?.role || '')}
                           value={editResponsible}
                           onChange={e => setEditResponsible(e.target.value)}
                           className="w-full p-2.5 text-[12px] font-bold text-gray-700 dark:text-gray-200 bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl outline-none focus:border-indigo-500 dark:focus:border-indigo-400 transition-colors dark:text-white dark:bg-[#1C1F2E]"
                         >
                           <option value="">Select Responsible Owner...</option>
                           {allUsers.map((u: any) => (
-                            <option key={u.id} value={u.id}>{u.name} ({u.role.replace('_', ' ')})</option>
+                            <option key={u.id} value={String(u.id)}>{u.name} ({u.role.replace('_', ' ')})</option>
                           ))}
                         </select>
                       </div>
@@ -1304,7 +1312,7 @@ export default function TaskDetailPage() {
                         <label className="block text-[11px] font-bold text-gray-400 dark:text-gray-500 mb-1.5 uppercase tracking-wide">Start Date</label>
                         <input 
                           type="date"
-                          disabled={!['admin', 'team_lead', 'crm_head', 'marketing_head', 'crm'].includes(user?.role || '')}
+                          disabled={!['admin', 'team_lead', 'crm_head', 'marketing_head', 'bdm'].includes(user?.role || '')}
                           value={editStartDate}
                           onChange={e => setEditStartDate(e.target.value)}
                           className="w-full p-2.5 text-[12px] font-bold text-gray-700 dark:text-gray-200 bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl outline-none focus:border-indigo-500 dark:focus:border-indigo-400 transition-colors dark:text-white dark:bg-[#1C1F2E]"
@@ -1316,7 +1324,7 @@ export default function TaskDetailPage() {
                         <label className="block text-[11px] font-bold text-gray-400 dark:text-gray-500 mb-1.5 uppercase tracking-wide">End Date / Timeline</label>
                         <input 
                           type="date"
-                          disabled={!['admin', 'team_lead', 'crm_head', 'marketing_head', 'crm'].includes(user?.role || '')}
+                          disabled={!['admin', 'team_lead', 'crm_head', 'marketing_head', 'bdm'].includes(user?.role || '')}
                           value={editEndDate}
                           onChange={e => setEditEndDate(e.target.value)}
                           className="w-full p-2.5 text-[12px] font-bold text-gray-700 dark:text-gray-200 bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl outline-none focus:border-indigo-500 dark:focus:border-indigo-400 transition-colors dark:text-white dark:bg-[#1C1F2E]"
@@ -1326,7 +1334,7 @@ export default function TaskDetailPage() {
                   </div>
 
                   {/* Actions for Leads */}
-                  {['admin', 'team_lead', 'crm_head', 'marketing_head', 'crm'].includes(user?.role || '') && (
+                  {['admin', 'team_lead', 'crm_head', 'marketing_head', 'bdm'].includes(user?.role || '') && (
                     <div className="flex justify-end pt-2">
                       <button 
                         disabled={isSavingStage}

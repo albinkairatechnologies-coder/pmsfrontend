@@ -58,6 +58,32 @@ function CardTitle({ children }: { children: React.ReactNode }) {
   );
 }
 
+const STAGES = ['planning','design','development','testing','delivery','completed'];
+
+const getStageStatusForTask = (task: any, stage: string): string => {
+  if (!task || !task.pipeline_stages) return 'pending';
+  
+  const stages = task.pipeline_stages;
+  
+  if (stage === 'delivery') {
+    const cv = stages.find((s: any) => s.stage_name === 'client_verification');
+    if (!cv) return 'pending';
+    if (cv.status === 'completed') return 'completed';
+    if (cv.status === 'in_progress') return 'in_progress';
+    return 'pending';
+  }
+  
+  if (stage === 'completed') {
+    const cv = stages.find((s: any) => s.stage_name === 'client_verification');
+    if (!cv) return 'pending';
+    if (cv.status === 'completed') return 'completed';
+    return 'pending';
+  }
+  
+  const found = stages.find((s: any) => s.stage_name === stage);
+  return found ? found.status : 'pending';
+};
+
 function parseIST(iso: string | null) {
   if (!iso) return null;
   if (!iso.includes('+') && !iso.endsWith('Z')) {
@@ -75,6 +101,7 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [attendance, setAttendance] = useState<any>(null);
   const [showImage, setShowImage] = useState<string | null>(null);
+  const [selectedTaskId, setSelectedTaskId] = useState<number | null>(null);
 
   const getAssetPath = (path: string | null) => {
     if (!path) return '';
@@ -91,48 +118,56 @@ export default function DashboardPage() {
     } catch (err) {}
   };
 
+  const loadDashboardData = async () => {
+    if (!user) return;
+    try {
+      if (user.role === 'admin' || user.role === 'marketing_head') {
+        const [d, s] = await Promise.all([
+          dashboardAPI.getAdminDashboard().catch(() => ({ data: null })),
+          salaryAPI.getStats().catch(() => ({ data: null }))
+        ]);
+        if (d?.data) setStats(d.data);
+        if (s?.data) setSalaryStats(s.data);
+      }
+      else if (user.role === 'team_lead' || user.role === 'crm_head') {
+        const res = await dashboardAPI.getLeadDashboard().catch(() => null);
+        if (res?.data) setStats(res.data);
+      }
+      else if (user.role === 'client') {
+        const clientRes = await clientAPI.getAll().catch(() => ({ data: [] }));
+        const client = clientRes?.data?.[0];
+        if (client) {
+           const statRes = await taskAPI.getClientStats(client.id).catch(() => ({ data: null }));
+           setStats({ client, taskStats: statRes?.data });
+        }
+      } else {
+        const res = await dashboardAPI.getStaffDashboard().catch(() => null);
+        if (res?.data) setStats(res.data);
+      }
+
+      // Fetch latest announcements for all roles
+      const annRes = await announcementAPI.getAll().catch(() => null);
+      if (annRes?.data) setAnnouncements(annRes.data.slice(0, 3));
+
+      // Fetch rewards (Gold Coins) for all users
+      const rewRes = await rewardsAPI.getStats().catch(() => null);
+      if (rewRes?.data) setRewards(rewRes.data);
+
+      await fetchAttendance();
+    } catch (err) { 
+      console.error("Dashboard Load Error:", err); 
+    }
+  };
+
   useEffect(() => {
     if (!user) return;
-    (async () => {
-      try {
-        if (user.role === 'admin' || user.role === 'marketing_head') {
-          const [d, s] = await Promise.all([
-            dashboardAPI.getAdminDashboard().catch(() => ({ data: null })),
-            salaryAPI.getStats().catch(() => ({ data: null }))
-          ]);
-          if (d?.data) setStats(d.data);
-          if (s?.data) setSalaryStats(s.data);
-        }
-        else if (user.role === 'team_lead' || user.role === 'crm_head') {
-          const res = await dashboardAPI.getLeadDashboard().catch(() => null);
-          if (res?.data) setStats(res.data);
-        }
-        else if (user.role === 'client') {
-          const clientRes = await clientAPI.getAll().catch(() => ({ data: [] }));
-          const client = clientRes?.data?.[0];
-          if (client) {
-             const statRes = await taskAPI.getClientStats(client.id).catch(() => ({ data: null }));
-             setStats({ client, taskStats: statRes?.data });
-          }
-        } else {
-          const res = await dashboardAPI.getStaffDashboard().catch(() => null);
-          if (res?.data) setStats(res.data);
-        }
+    loadDashboardData().then(() => setLoading(false));
 
-        // Fetch latest announcements for all roles
-        const annRes = await announcementAPI.getAll().catch(() => null);
-        if (annRes?.data) setAnnouncements(annRes.data.slice(0, 3));
+    const timer = setInterval(() => {
+      loadDashboardData();
+    }, 5000);
 
-        // Fetch rewards (Gold Coins) for all users
-        const rewRes = await rewardsAPI.getStats().catch(() => null);
-        if (rewRes?.data) setRewards(rewRes.data);
-
-        await fetchAttendance();
-      } catch (err) { 
-        console.error("Dashboard Load Error:", err); 
-      }
-      setLoading(false);
-    })();
+    return () => clearInterval(timer);
   }, [user]);
 
   const handleCheckInOut = async () => {
@@ -530,37 +565,114 @@ export default function DashboardPage() {
   );
 
   /* ── Client ── */
-  if (user?.role === 'client') return (
-    <div className="p-6 space-y-6">
-      <h1 className="text-2xl md:text-3xl font-black text-shimmer">Project Dashboard</h1>
-      <GlowCard className="p-6" goldBorder>
-        <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">{stats?.client?.company_name}</h2>
-        <div className="grid grid-cols-2 gap-4 mb-6">
-          <div>
-            <p className="text-xs text-gray-500 uppercase tracking-wider">Status</p>
-            <p className="text-lg font-semibold text-gray-900 dark:text-white mt-1">{stats?.client?.status}</p>
-          </div>
-          <div>
-            <p className="text-xs text-gray-500 uppercase tracking-wider">Deadline</p>
-            <p className="text-lg font-semibold text-gray-900 dark:text-white mt-1">{stats?.client?.deadline}</p>
-          </div>
-        </div>
-        <CardTitle>Progress by Department</CardTitle>
-        {stats?.taskStats?.by_department?.map((dept: any) => (
-          <div key={dept.department} className="mb-4">
-            <div className="flex justify-between mb-1.5">
-              <span className="text-sm font-medium text-gray-900 dark:text-white">{dept.department}</span>
-              <span className="text-xs text-gray-500">{dept.completed}/{dept.total}</span>
+  if (user?.role === 'client') {
+    const clientTasks = stats?.client?.tasks || [];
+    const selectedTask = clientTasks.find((t: any) => t.id === selectedTaskId) || null;
+
+    return (
+      <div className="p-6 space-y-6">
+        <h1 className="text-2xl md:text-3xl font-black text-shimmer">Project Dashboard</h1>
+        <GlowCard className="p-6" goldBorder>
+          <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">{stats?.client?.company_name}</h2>
+          <div className="grid grid-cols-2 gap-4 mb-6">
+            <div>
+              <p className="text-xs text-gray-500 uppercase tracking-wider">Status</p>
+              <p className="text-lg font-semibold text-gray-900 dark:text-white mt-1 capitalize">
+                {stats?.client?.status?.replace(/_/g, ' ')}
+              </p>
             </div>
-            <div className="w-full h-2 rounded-full bg-gray-100 dark:bg-white/8">
-              <div className="h-2 rounded-full transition-all duration-500"
-                style={{ width: `${dept.total > 0 ? (dept.completed / dept.total) * 100 : 0}%`, background: 'linear-gradient(90deg, #6366F1, #8B5CF6)' }} />
+            <div>
+              <p className="text-xs text-gray-500 uppercase tracking-wider">Deadline</p>
+              <p className="text-lg font-semibold text-gray-900 dark:text-white mt-1">{stats?.client?.deadline || '—'}</p>
             </div>
           </div>
-        ))}
-      </GlowCard>
-    </div>
-  );
+
+          {/* Project Execution Pipeline Stepper */}
+          <div className="mb-8 bg-gray-50/50 dark:bg-white/[0.01] p-5 rounded-2xl border border-gray-100 dark:border-white/5 shadow-sm">
+            <CardTitle>Project Execution Pipeline</CardTitle>
+            
+            {/* Task selector badges (if multiple tasks) */}
+            {clientTasks.length > 0 && (
+              <div className="flex flex-wrap gap-2 mb-6 bg-gray-100/50 dark:bg-white/[0.02] p-3 rounded-xl border border-gray-200/50 dark:border-white/5">
+                <span className="text-xs text-gray-400 font-bold self-center mr-1">View Task Status:</span>
+                {clientTasks.map((t: any) => {
+                  const isSel = selectedTaskId === t.id;
+                  return (
+                    <button
+                      key={t.id}
+                      onClick={() => setSelectedTaskId(isSel ? null : t.id)}
+                      className={`inline-flex items-center text-xs font-semibold px-3 py-1.5 rounded-lg border transition-all cursor-pointer ${
+                        isSel
+                          ? 'bg-amber-500 text-white border-amber-600 shadow-md scale-105 font-bold'
+                          : 'bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-200/50 dark:border-amber-500/20 shadow-sm opacity-85 hover:opacity-100 hover:scale-105'
+                      }`}
+                    >
+                      📋 {t.title} {isSel && '✓'}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Stepper display */}
+            <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
+              {STAGES.map(stage => {
+                let isCurrent = false;
+                let isCompleted = false;
+                let isInProgress = false;
+
+                if (selectedTask) {
+                  const status = getStageStatusForTask(selectedTask, stage);
+                  isCompleted = status === 'completed';
+                  isInProgress = status === 'in_progress';
+                } else {
+                  isCurrent = stats?.client?.status === stage;
+                  const currentIndex = STAGES.indexOf(stats?.client?.status || '');
+                  const thisIndex = STAGES.indexOf(stage);
+                  isCompleted = thisIndex < currentIndex;
+                  isInProgress = isCurrent;
+                }
+
+                return (
+                  <div
+                    key={stage}
+                    className={`p-3.5 rounded-xl border text-center transition-all shadow-sm ${
+                      isCompleted
+                        ? 'bg-emerald-500 border-emerald-600 text-white shadow-md'
+                        : isInProgress
+                        ? 'bg-amber-500 border-amber-600 text-white shadow-md animate-pulse font-bold'
+                        : 'bg-gray-50 dark:bg-white/[0.02] border-gray-200 dark:border-white/5 text-gray-500 dark:text-gray-400'
+                    }`}
+                  >
+                    <div className="text-[10px] uppercase font-black tracking-wider opacity-90">
+                      {stage.replace(/_/g, ' ')}
+                    </div>
+                    <div className="text-[9px] mt-1 font-bold uppercase opacity-80">
+                      {isCompleted ? '✓ Completed' : isInProgress ? '● Active' : '○ Pending'}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          <CardTitle>Progress by Department</CardTitle>
+          {stats?.taskStats?.by_department?.map((dept: any) => (
+            <div key={dept.department} className="mb-4">
+              <div className="flex justify-between mb-1.5">
+                <span className="text-sm font-medium text-gray-900 dark:text-white">{dept.department}</span>
+                <span className="text-xs text-gray-500">{dept.completed}/{dept.total}</span>
+              </div>
+              <div className="w-full h-2 rounded-full bg-gray-100 dark:bg-white/8">
+                <div className="h-2 rounded-full transition-all duration-500"
+                  style={{ width: `${dept.total > 0 ? (dept.completed / dept.total) * 100 : 0}%`, background: 'linear-gradient(90deg, #6366F1, #8B5CF6)' }} />
+              </div>
+            </div>
+          ))}
+        </GlowCard>
+      </div>
+    );
+  }
 
   /* ── Employee ── */
   return (

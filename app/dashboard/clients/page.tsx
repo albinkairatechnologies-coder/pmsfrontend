@@ -2,12 +2,55 @@
 
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
-import { clientAPI, authAPI, proposalAPI } from '../../utils/api';
+import { clientAPI, authAPI, proposalAPI, taskAPI } from '../../utils/api';
 import { useAuth } from '../../utils/AuthContext';
 import { FiPlus, FiSearch, FiSend, FiChevronDown, FiChevronUp, FiEye, FiCheck, FiClock, FiX, FiUser } from 'react-icons/fi';
 import SendProposalModal from '../../components/SendProposalModal';
 
-const STAGES = ['lead','onboarding','planning','design','development','marketing_execution','testing','delivery','completed'];
+const STAGES = ['planning','design','development','testing','delivery','completed'];
+
+const getStageStatusForTask = (task: any, stage: string): string => {
+  if (!task || !task.pipeline_stages) return 'pending';
+  
+  const stages = task.pipeline_stages;
+  
+  if (stage === 'delivery') {
+    const cv = stages.find((s: any) => s.stage_name === 'client_verification');
+    if (!cv) return 'pending';
+    if (cv.status === 'completed') return 'completed';
+    if (cv.status === 'in_progress') return 'in_progress';
+    return 'pending';
+  }
+  
+  if (stage === 'completed') {
+    const cv = stages.find((s: any) => s.stage_name === 'client_verification');
+    if (!cv) return 'pending';
+    if (cv.status === 'completed') return 'completed';
+    return 'pending';
+  }
+  
+  const found = stages.find((s: any) => s.stage_name === stage);
+  return found ? found.status : 'pending';
+};
+
+const getDbStageName = (stage: string) => {
+  if (stage === 'delivery' || stage === 'completed') {
+    return 'client_verification';
+  }
+  return stage;
+};
+
+const getNextStageStatus = (currentStatus: string, clickedStage: string) => {
+  if (clickedStage === 'delivery') {
+    return currentStatus === 'in_progress' ? 'pending' : 'in_progress';
+  }
+  if (clickedStage === 'completed') {
+    return currentStatus === 'completed' ? 'pending' : 'completed';
+  }
+  if (currentStatus === 'completed') return 'pending';
+  if (currentStatus === 'in_progress') return 'completed';
+  return 'in_progress';
+};
 
 const STATUS_BADGE: Record<string, string> = {
   draft:    'bg-gray-100 dark:bg-gray-700 text-gray-500',
@@ -24,6 +67,7 @@ const STATUS_ICON: Record<string, any> = {
 export default function ClientsPage() {
   const { user } = useAuth();
   const isAdmin  = user?.role === 'admin' || user?.role === 'marketing_head';
+  const canModify = ['admin', 'marketing_head', 'team_lead'].includes(user?.role || '');
 
   const [clients, setClients]         = useState<any[]>([]);
   const [showModal, setShowModal]     = useState(false);
@@ -32,6 +76,7 @@ export default function ClientsPage() {
   const [expandedId, setExpandedId]   = useState<number | null>(null);
   const [proposals, setProposals]     = useState<Record<number, any[]>>({});
   const [sendTarget, setSendTarget]   = useState<any | null>(null);
+  const [selectedTaskIds, setSelectedTaskIds] = useState<Record<number, number>>({});
 
   const [formData, setFormData] = useState({
     company_name: '', contact_person: '', phone: '', email: '',
@@ -40,6 +85,14 @@ export default function ClientsPage() {
   });
 
   useEffect(() => { loadClients(); loadUsers(); }, []);
+
+  useEffect(() => {
+    if (searchQuery.trim()) return;
+    const timer = setInterval(() => {
+      loadClients();
+    }, 5000);
+    return () => clearInterval(timer);
+  }, [searchQuery]);
 
   const loadClients = async () => {
     try { setClients((await clientAPI.getAll()).data); } catch { /* ignore */ }
@@ -86,10 +139,29 @@ export default function ClientsPage() {
   };
 
   const handleStageUpdate = async (clientId: number, stage: string) => {
-    try {
-      await clientAPI.update(clientId, { status: stage });
-      loadClients();
-    } catch { /* ignore */ }
+    const client = clients.find(c => c.id === clientId);
+    const selectedTaskId = selectedTaskIds[clientId];
+    const selectedTask = client?.tasks?.find((t: any) => t.id === selectedTaskId);
+
+    if (selectedTask) {
+      const dbStageName = getDbStageName(stage);
+      const currentStatus = getStageStatusForTask(selectedTask, stage);
+      const newStatus = getNextStageStatus(currentStatus, stage);
+      try {
+        await taskAPI.updatePipelineStage(selectedTask.id, dbStageName, {
+          status: newStatus,
+          start_date: null,
+          end_date: null,
+          responsible_person_id: null
+        });
+        loadClients();
+      } catch { /* ignore */ }
+    } else {
+      try {
+        await clientAPI.update(clientId, { status: stage });
+        loadClients();
+      } catch { /* ignore */ }
+    }
   };
 
   return (
@@ -135,6 +207,32 @@ export default function ClientsPage() {
                   </div>
                   <p className="text-sm text-gray-600 dark:text-gray-400 mt-0.5">{client.contact_person}</p>
                   <p className="text-xs text-gray-400 mt-0.5">{client.email} {client.phone ? `· ${client.phone}` : ''}</p>
+                  {client.tasks && client.tasks.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5 mt-2">
+                      {client.tasks.map((task: any) => {
+                        const isSelected = selectedTaskIds[client.id] === task.id;
+                        return (
+                          <button
+                            key={task.id}
+                            onClick={() => {
+                              setSelectedTaskIds(prev => ({
+                                ...prev,
+                                [client.id]: isSelected ? undefined : task.id
+                              }));
+                            }}
+                            className={`inline-flex items-center text-[10px] font-semibold px-2 py-0.5 rounded-md border transition-all cursor-pointer ${
+                              isSelected
+                                ? 'bg-amber-500 text-white border-amber-600 shadow-md scale-105 font-bold'
+                                : 'bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-200/50 dark:border-amber-500/20 shadow-sm opacity-75 hover:opacity-100 hover:scale-105'
+                            }`}
+                            title={task.description}
+                          >
+                            📋 {task.title} {isSelected && '✓'}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
 
                 <div className="flex items-center gap-2 flex-shrink-0">
@@ -161,17 +259,40 @@ export default function ClientsPage() {
 
               {/* Stage pipeline */}
               <div className="flex gap-1.5 mt-4 overflow-x-auto pb-1">
-                {STAGES.map(stage => (
-                  <div key={stage}
-                    onClick={() => isAdmin && handleStageUpdate(client.id, stage)}
-                    className={`px-2.5 py-1 rounded-lg text-xs whitespace-nowrap font-medium transition-all ${
-                      client.status === stage
-                        ? 'bg-primary-500 text-white shadow-sm'
-                        : 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-500'
-                    } ${isAdmin ? 'cursor-pointer hover:bg-primary-400 hover:text-white' : ''}`}>
-                    {stage.replace(/_/g, ' ')}
-                  </div>
-                ))}
+                {STAGES.map(stage => {
+                  const selectedTaskId = selectedTaskIds[client.id];
+                  const selectedTask = client.tasks?.find((t: any) => t.id === selectedTaskId);
+                  
+                  let stageStyle = '';
+                  let displayStatus = '';
+                  
+                  if (selectedTask) {
+                    const status = getStageStatusForTask(selectedTask, stage);
+                    displayStatus = ` (${status.replace(/_/g, ' ')})`;
+                    if (status === 'completed') {
+                      stageStyle = 'bg-emerald-500 text-white shadow-sm';
+                    } else if (status === 'in_progress') {
+                      stageStyle = 'bg-amber-500 text-white shadow-sm font-bold animate-pulse';
+                    } else {
+                      stageStyle = 'bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500';
+                    }
+                  } else {
+                    stageStyle = client.status === stage
+                      ? 'bg-primary-500 text-white shadow-sm'
+                      : 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-500';
+                  }
+
+                  return (
+                    <div key={stage}
+                      onClick={() => canModify && handleStageUpdate(client.id, stage)}
+                      className={`px-2.5 py-1 rounded-lg text-xs whitespace-nowrap font-medium transition-all ${stageStyle} ${
+                        canModify ? 'cursor-pointer hover:bg-primary-400 hover:text-white' : ''
+                      }`}
+                    >
+                      {stage.replace(/_/g, ' ')}{displayStatus}
+                    </div>
+                  );
+                })}
               </div>
 
               {/* Meta row */}

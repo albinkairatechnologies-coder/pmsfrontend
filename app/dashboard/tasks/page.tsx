@@ -54,6 +54,7 @@ export default function TasksPage() {
   const [tasks, setTasks] = useState<any[]>([]);
   const [teams, setTeams] = useState<any[]>([]);
   const [members, setMembers] = useState<any[]>([]);
+  const [clients, setClients] = useState<any[]>([]);
   const [showModal, setShowModal] = useState(false);
   const [filterStatus, setFilterStatus] = useState('');
   const [filterTeam, setFilterTeam] = useState('');
@@ -81,6 +82,7 @@ export default function TasksPage() {
         loadTasks(),
         orgAPI.getTeams().then(r => setTeams(r.data)),
         orgAPI.getMembers().then(r => setMembers(r.data)),
+        clientAPI.getAll().then(r => setClients(r.data)),
       ]);
     } catch { /* ignore */ }
     setLoading(false);
@@ -410,6 +412,14 @@ export default function TasksPage() {
                   <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Due Date</label>
                   <input type="date" value={formData.due_date} min={today} onChange={e => setFormData({ ...formData, due_date: e.target.value })}
                     className="w-full px-5 py-4 bg-gray-50 dark:bg-white/5 border border-transparent focus:border-primary-500/30 rounded-2xl outline-none text-sm font-bold dark:text-white" />
+                </div>
+                <div className="space-y-1.5 md:col-span-2">
+                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Client Name</label>
+                  <select value={formData.client_id} onChange={e => setFormData({ ...formData, client_id: e.target.value })}
+                    className="w-full px-5 py-4 bg-gray-50 dark:bg-white/5 border border-transparent focus:border-primary-500/30 rounded-2xl outline-none text-xs font-bold dark:text-white appearance-none cursor-pointer">
+                    <option value="">Select Client...</option>
+                    {clients.map(c => <option key={c.id} value={c.id}>{c.company_name}</option>)}
+                  </select>
                 </div>
               </div>
 
