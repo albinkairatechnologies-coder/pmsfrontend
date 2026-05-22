@@ -211,6 +211,7 @@ export const leaveAPI = {
   getStats:    () => api.get('/leaves/stats'),
   approve:     (id: number) => api.patch(`/leaves/${id}/approve`),
   reject:      (id: number, note?: string) => api.patch(`/leaves/${id}/reject`, { note }),
+  delete:      (id: number) => api.delete(`/leaves/${id}`),
 };
 
 export const permissionAPI = {

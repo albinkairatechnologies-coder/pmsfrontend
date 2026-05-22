@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import { FiBell, FiX } from 'react-icons/fi';
 import { notificationAPI, domainAPI } from '../utils/api';
 import { useAuth } from '../utils/AuthContext';
@@ -26,6 +27,7 @@ const DOMAIN_ROLES = ['admin', 'crm_head', 'marketing_head', 'team_lead'];
 
 export default function NotificationBell() {
   const { user } = useAuth();
+  const router = useRouter();
   const [open, setOpen]                   = useState(false);
   const [notifications, setNotifications] = useState<any[]>([]);
   const [domainAlerts, setDomainAlerts]   = useState<any[]>([]);
@@ -34,6 +36,17 @@ export default function NotificationBell() {
   const ref = useRef<HTMLDivElement>(null);
   const lastUnreadRef = useRef(0);
   const [hasPermission, setHasPermission] = useState(false);
+
+  const resolveLink = (path: string | null) => {
+    if (!path) return '';
+    if (typeof window !== 'undefined' && window.location.pathname.startsWith('/pms')) {
+      if (path.startsWith('/pms')) {
+        return path;
+      }
+      return `/pms${path}`;
+    }
+    return path;
+  };
 
   useEffect(() => {
     if (typeof window !== 'undefined' && 'Notification' in window) {
@@ -47,12 +60,18 @@ export default function NotificationBell() {
     }
   }, []);
 
-  const triggerDesktopNotification = (title: string, body: string) => {
+  const triggerDesktopNotification = (title: string, body: string, link?: string) => {
     if (hasPermission) {
-      new Notification(title, {
+      const notification = new Notification(title, {
         body,
-        icon: '/favicon.ico', // Adjust if you have a specific icon
+        icon: typeof window !== 'undefined' && window.location.pathname.startsWith('/pms') ? '/pms/favicon.ico' : '/favicon.ico',
       });
+      if (link) {
+        notification.onclick = () => {
+          window.focus();
+          router.push(resolveLink(link));
+        };
+      }
     }
   };
 
@@ -91,7 +110,7 @@ export default function NotificationBell() {
       if (newCount > prevCount && nRes.data.length > 0) {
         const latest = nRes.data[0];
         if (!latest.is_read) {
-          triggerDesktopNotification(latest.title, latest.message);
+          triggerDesktopNotification(latest.title, latest.message, latest.link);
           setActiveAlert(latest);
           setTimeout(() => setActiveAlert(null), 5000);
         }
@@ -168,7 +187,17 @@ export default function NotificationBell() {
               <p className="text-center text-gray-500 text-sm py-8">No notifications</p>
             ) : allNotifications.map(n => (
               <div key={n.id}
-                onClick={() => typeof n.id === 'number' && !n.is_read && markRead(n.id)}
+                onClick={async () => {
+                  if (typeof n.id === 'number') {
+                    if (!n.is_read) {
+                      await markRead(n.id);
+                    }
+                    if (n.link) {
+                      router.push(resolveLink(n.link));
+                      setOpen(false);
+                    }
+                  }
+                }}
                 className={`px-4 py-3 border-b border-white/5 cursor-pointer hover:bg-white/5 transition-colors ${
                   !n.is_read ? (n.type?.startsWith('domain') ? 'bg-red-500/10' : 'bg-primary-500/5') : ''
                 }`}>
@@ -211,7 +240,7 @@ export default function NotificationBell() {
               </button>
             </div>
             {activeAlert.link && (
-               <a href={activeAlert.link} className="block mt-3 text-[10px] font-black text-primary-400 hover:text-primary-300 uppercase tracking-widest">
+               <a href={resolveLink(activeAlert.link)} className="block mt-3 text-[10px] font-black text-primary-400 hover:text-primary-300 uppercase tracking-widest">
                  View Details &rarr;
                </a>
             )}

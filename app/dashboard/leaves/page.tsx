@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { leaveAPI } from '../../utils/api';
 import { useAuth } from '../../utils/AuthContext';
-import { FiPlus, FiCheck, FiX, FiCalendar, FiClock, FiUsers, FiAlertCircle } from 'react-icons/fi';
+import { FiPlus, FiCheck, FiX, FiCalendar, FiClock, FiUsers, FiAlertCircle, FiTrash2 } from 'react-icons/fi';
 
 const LEAD_ROLES = ['admin', 'team_lead', 'marketing_head', 'crm_head'];
 
@@ -111,6 +111,16 @@ export default function LeavesPage() {
       setRejectModal(null);
       await Promise.all([loadPending(), loadAll(), loadStats(), loadMy()]);
     } catch (err: any) { alert(err.response?.data?.error || 'Failed'); }
+  };
+
+  const handleDelete = async (id: number) => {
+    if (!confirm('Are you sure you want to delete this leave request details?')) return;
+    try {
+      await leaveAPI.delete(id);
+      await Promise.all([loadPending(), loadAll(), loadStats(), loadMy()]);
+    } catch (err: any) {
+      alert(err.response?.data?.error || 'Failed to delete leave request');
+    }
   };
 
   // Calculate days between two dates
@@ -402,14 +412,14 @@ export default function LeavesPage() {
         <table className="w-full text-sm">
           <thead className="bg-gray-50 dark:bg-gray-800">
             <tr>
-              {['Employee', 'Type', 'From', 'To', 'Days', 'Reason', 'Status', 'Approved By'].map(h => (
+              {['Employee', 'Type', 'From', 'To', 'Days', 'Reason', 'Status', 'Approved By', 'Actions'].map(h => (
                 <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">{h}</th>
               ))}
             </tr>
           </thead>
           <tbody>
             {allLeaves.length === 0 && (
-              <tr><td colSpan={8} className="px-4 py-8 text-center text-gray-400">No records</td></tr>
+              <tr><td colSpan={9} className="px-4 py-8 text-center text-gray-400">No records</td></tr>
             )}
             {allLeaves.map((l: any) => (
               <tr key={l.id} className="border-b border-gray-50 dark:border-gray-800 hover:bg-gray-50/70 dark:hover:bg-gray-800/50">
@@ -432,6 +442,17 @@ export default function LeavesPage() {
                   </span>
                 </td>
                 <td className="px-4 py-3 text-gray-500 text-sm">{l.approved_by_name || '—'}</td>
+                <td className="px-4 py-3">
+                  {isLead && (
+                    <button 
+                      onClick={() => handleDelete(l.id)} 
+                      title="Delete leave request"
+                      className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-all"
+                    >
+                      <FiTrash2 size={16} />
+                    </button>
+                  )}
+                </td>
               </tr>
             ))}
           </tbody>

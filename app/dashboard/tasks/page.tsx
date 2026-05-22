@@ -26,15 +26,15 @@ const PRIORITY_STYLE: Record<string, string> = {
   low:    'bg-emerald-500/10 text-emerald-500 border-emerald-500/20',
 };
 
-function LuxuryStatCard({ label, value, icon: Icon, cls, onClick, active }: any) {
+function LuxuryStatCard({ label, value, icon: Icon, bgCls, onClick, active }: any) {
   return (
     <GlowCard 
       onClick={onClick}
       className={`p-5 cursor-pointer transition-all duration-300 border-2 ${active ? 'border-primary-500/50 dark:border-gold-500/50 ring-4 ring-primary-500/5' : 'border-transparent'}`}
     >
       <div className="flex items-center gap-4">
-        <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-xl ${cls} bg-opacity-10 bg-current shadow-inner`}>
-           <Icon size={22} />
+        <div className={`w-12 h-12 rounded-full flex items-center justify-center text-xl text-white ${bgCls} shadow-lg shadow-black/10`}>
+           <Icon size={20} />
         </div>
         <div>
           <p className="text-2xl font-black text-gray-900 dark:text-white leading-none mb-1">{value}</p>
@@ -183,10 +183,10 @@ export default function TasksPage() {
 
       {/* Luxury Stats - Responsive Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
-         <LuxuryStatCard label="Total Tasks" value={stats.total} icon={FiLayers} cls="text-blue-500" onClick={() => setFilterStatus('')} active={filterStatus === ''} />
-         <LuxuryStatCard label="Pending" value={stats.pending} icon={FiClock} cls="text-orange-500" onClick={() => setFilterStatus('pending')} active={filterStatus === 'pending'} />
-         <LuxuryStatCard label="In Motion" value={stats.active} icon={FiActivity} cls="text-purple-500" onClick={() => setFilterStatus('in_progress')} active={filterStatus === 'in_progress'} />
-         <LuxuryStatCard label="Completed" value={stats.completed} icon={FiCheckCircle} cls="text-emerald-500" onClick={() => setFilterStatus('completed')} active={filterStatus === 'completed'} />
+         <LuxuryStatCard label="Total Tasks" value={stats.total} icon={FiLayers} bgCls="bg-blue-500" onClick={() => setFilterStatus('')} active={filterStatus === ''} />
+         <LuxuryStatCard label="Pending" value={stats.pending} icon={FiClock} bgCls="bg-orange-500" onClick={() => setFilterStatus('pending')} active={filterStatus === 'pending'} />
+         <LuxuryStatCard label="In Motion" value={stats.active} icon={FiActivity} bgCls="bg-purple-500" onClick={() => setFilterStatus('in_progress')} active={filterStatus === 'in_progress'} />
+         <LuxuryStatCard label="Completed" value={stats.completed} icon={FiCheckCircle} bgCls="bg-emerald-500" onClick={() => setFilterStatus('completed')} active={filterStatus === 'completed'} />
       </div>
 
       {/* Toolbar */}
