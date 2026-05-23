@@ -1,11 +1,9 @@
 'use client';
 
 import { useEffect, useState, useRef } from 'react';
-import { activityAPI, authAPI } from '../../utils/api';
+import { activityAPI, authAPI, API_URL } from '../../utils/api';
 import { useAuth } from '../../utils/AuthContext';
 import { FiRefreshCw, FiActivity, FiUsers, FiClock, FiZap } from 'react-icons/fi';
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
 
 const STATUS_CONFIG: Record<string, { label: string; dot: string; badge: string }> = {
   active:  { label: 'Active',   dot: 'bg-green-400 animate-pulse',  badge: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' },

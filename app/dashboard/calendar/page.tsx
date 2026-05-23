@@ -8,7 +8,7 @@ import {
   FiUser, FiClock, FiPieChart, FiX, FiFilter, FiTrash2
 } from 'react-icons/fi';
 import { useAuth } from '../../utils/AuthContext';
-import { calendarAPI, orgAPI } from '../../utils/api';
+import { calendarAPI, orgAPI, API_URL } from '../../utils/api';
 
 function parseIST(iso: string | null) {
   if (!iso) return null;
@@ -134,8 +134,8 @@ export default function CalendarPage() {
     try {
       const [evRes, attRes, leaveRes] = await Promise.all([
         calendarAPI.getUserEvents(u.id, { month: new Date().getMonth() + 1, year: new Date().getFullYear() }),
-        fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api'}/attendance/report?user_id=${u.id}&start_date=${new Date().getFullYear()}-${String(new Date().getMonth()+1).padStart(2,'0')}-01&end_date=${new Date().getFullYear()}-${String(new Date().getMonth()+1).padStart(2,'0')}-31`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }).then(r => r.json()),
-        fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api'}/leaves/all?user_id=${u.id}`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }).then(r => r.json()),
+        fetch(`${API_URL}/attendance/report?user_id=${u.id}&start_date=${new Date().getFullYear()}-${String(new Date().getMonth()+1).padStart(2,'0')}-01&end_date=${new Date().getFullYear()}-${String(new Date().getMonth()+1).padStart(2,'0')}-31`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }).then(r => r.json()),
+        fetch(`${API_URL}/leaves/all?user_id=${u.id}`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }).then(r => r.json()),
       ]);
       const events = Array.isArray(evRes.data) ? evRes.data : [];
       const att = Array.isArray(attRes) ? attRes.map((a: any) => ({ id: `att-${a.id}`, title: `${a.status?.replace('_',' ')} ${a.check_in_time ? '· '+formatIST12(a.check_in_time) : ''}`, entry_type: a.status === 'present' || a.status === 'late' ? 'task' : a.status === 'on_leave' ? 'holiday' : 'week_off', start_time: a.date })) : [];
@@ -155,7 +155,7 @@ export default function CalendarPage() {
       const pad = (n: number) => String(n).padStart(2,'0');
       const [evRes, attRes] = await Promise.all([
         calendarAPI.getUserEvents(viewingUser.id, { month: m, year: y }),
-        fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api'}/attendance/report?user_id=${viewingUser.id}&start_date=${y}-${pad(m)}-01&end_date=${y}-${pad(m)}-31`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }).then(r => r.json()),
+        fetch(`${API_URL}/attendance/report?user_id=${viewingUser.id}&start_date=${y}-${pad(m)}-01&end_date=${y}-${pad(m)}-31`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }).then(r => r.json()),
       ]);
       const events = Array.isArray(evRes.data) ? evRes.data : [];
       const att = Array.isArray(attRes) ? attRes.map((a: any) => ({ id: `att-${a.id}`, title: `${a.status?.replace('_',' ')} ${a.check_in_time ? '· '+formatIST12(a.check_in_time) : ''}`, entry_type: a.status === 'present' || a.status === 'late' ? 'task' : a.status === 'on_leave' ? 'holiday' : 'week_off', start_time: a.date })) : [];

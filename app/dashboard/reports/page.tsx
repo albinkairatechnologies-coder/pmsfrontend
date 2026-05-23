@@ -136,9 +136,9 @@ export default function ReportsPage() {
 
   const handlePrint = () => {
     if (!reportData.length) return;
-    const API = process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') || 'http://localhost:5000';
-    const topSrc = `${API}/static/letterpadtop.png`;
-    const botSrc = `${API}/static/letterpadbottom.png`;
+    const prefix = typeof window !== 'undefined' && window.location.pathname.includes('/pms') ? '/pms' : '';
+    const topSrc = `${prefix}/letterpadtop.png`;
+    const botSrc = `${prefix}/letterpadbottom.png`;
 
     const colHeaders = cols.map(c => `<th style="padding:6px 8px;border:1px solid #ccc;background:#dbeafe;font-size:11px">${COL_LABELS[c] || c}</th>`).join('');
     const dataRows = reportData.map(r =>
@@ -160,7 +160,7 @@ export default function ReportsPage() {
       .footer{margin-top:12px;font-size:9px;color:#888;display:flex;justify-content:space-between}
       @media print{@page{margin:0}}
     </style></head><body>
-    <img class="top-img" src="/letterpadtop.png" />
+    <img class="top-img" src="${topSrc}" />
     <div class="content">
       <h2>${REPORT_TYPES.find(r => r.value === reportType)?.label}</h2>
       <p class="sub">Date Range: ${startDate} to ${endDate}</p>
@@ -170,7 +170,7 @@ export default function ReportsPage() {
         <span>Generated on: ${new Date().toLocaleString()}</span>
       </div>
     </div>
-    <img class="bot-img" src="/letterpadbottom.png" />
+    <img class="bot-img" src="${botSrc}" />
     <script>window.onload=()=>{window.print();}<\/script>
     </body></html>`;
 

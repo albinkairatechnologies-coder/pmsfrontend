@@ -1,9 +1,9 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useAuth } from '../utils/AuthContext';
 import { dashboardAPI, clientAPI, taskAPI, salaryAPI, announcementAPI, rewardsAPI, attendanceAPI } from '../utils/api';
-import { FiUsers, FiCheckCircle, FiAlertCircle, FiGrid, FiEye, FiDollarSign, FiAward, FiTrendingUp, FiClock, FiLogIn, FiLogOut, FiX } from 'react-icons/fi';
+import { FiUsers, FiCheckCircle, FiAlertCircle, FiGrid, FiEye, FiDollarSign, FiAward, FiTrendingUp, FiClock, FiLogIn, FiLogOut, FiX, FiCalendar, FiUser, FiActivity } from 'react-icons/fi';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import GlowCard from '../components/GlowCard';
 
@@ -84,6 +84,28 @@ const getStageStatusForTask = (task: any, stage: string): string => {
   return found ? found.status : 'pending';
 };
 
+const getOverallProgress = (task: any) => {
+  if (!task || !task.pipeline_stages) return 0;
+  const stages = ['planning', 'design', 'development', 'testing', 'delivery', 'completed'];
+  let highestCompletedIndex = -1;
+  stages.forEach((stage, idx) => {
+    const status = getStageStatusForTask(task, stage);
+    if (status === 'completed') {
+      highestCompletedIndex = idx;
+    }
+  });
+  
+  const percentages = [15, 35, 60, 80, 95, 100];
+  if (highestCompletedIndex === -1) {
+    const inProgressIndex = stages.findIndex(s => getStageStatusForTask(task, s) === 'in_progress');
+    if (inProgressIndex !== -1) {
+      return Math.round(percentages[inProgressIndex] / 2);
+    }
+    return 0;
+  }
+  return percentages[highestCompletedIndex];
+};
+
 function parseIST(iso: string | null) {
   if (!iso) return null;
   if (!iso.includes('+') && !iso.endsWith('Z')) {
@@ -102,6 +124,20 @@ export default function DashboardPage() {
   const [attendance, setAttendance] = useState<any>(null);
   const [showImage, setShowImage] = useState<string | null>(null);
   const [selectedTaskId, setSelectedTaskId] = useState<number | null>(null);
+  const [autoOpenNew, setAutoOpenNew] = useState(true);
+  const [newTaskAlert, setNewTaskAlert] = useState<string | null>(null);
+
+  const selectedTaskIdRef = useRef<number | null>(null);
+  const autoOpenNewRef = useRef(true);
+  const prevMaxTaskIdRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    selectedTaskIdRef.current = selectedTaskId;
+  }, [selectedTaskId]);
+
+  useEffect(() => {
+    autoOpenNewRef.current = autoOpenNew;
+  }, [autoOpenNew]);
 
   const getAssetPath = (path: string | null) => {
     if (!path) return '';
@@ -137,8 +173,30 @@ export default function DashboardPage() {
         const clientRes = await clientAPI.getAll().catch(() => ({ data: [] }));
         const client = clientRes?.data?.[0];
         if (client) {
-           const statRes = await taskAPI.getClientStats(client.id).catch(() => ({ data: null }));
-           setStats({ client, taskStats: statRes?.data });
+          const statRes = await taskAPI.getClientStats(client.id).catch(() => ({ data: null }));
+          setStats({ client, taskStats: statRes?.data });
+
+          const clientTasks = client.tasks || [];
+          if (clientTasks.length > 0) {
+            const sortedTasks = [...clientTasks].sort((a: any, b: any) => b.id - a.id);
+            const latestTaskId = sortedTasks[0].id;
+            
+            const currentSelected = selectedTaskIdRef.current;
+            const currentPrevMax = prevMaxTaskIdRef.current;
+
+            // 1. Initial selection
+            if (currentSelected === null) {
+              setSelectedTaskId(latestTaskId);
+            }
+            // 2. Detect brand new task
+            else if (currentPrevMax !== null && latestTaskId > currentPrevMax && autoOpenNewRef.current) {
+              setSelectedTaskId(latestTaskId);
+              setNewTaskAlert(sortedTasks[0].title);
+              setTimeout(() => setNewTaskAlert(null), 5000);
+            }
+
+            prevMaxTaskIdRef.current = latestTaskId;
+          }
         }
       } else {
         const res = await dashboardAPI.getStaffDashboard().catch(() => null);
@@ -568,108 +626,257 @@ export default function DashboardPage() {
   if (user?.role === 'client') {
     const clientTasks = stats?.client?.tasks || [];
     const selectedTask = clientTasks.find((t: any) => t.id === selectedTaskId) || null;
+    const progress = selectedTask ? getOverallProgress(selectedTask) : 0;
 
     return (
       <div className="p-6 space-y-6">
-        <h1 className="text-2xl md:text-3xl font-black text-shimmer">Project Dashboard</h1>
-        <GlowCard className="p-6" goldBorder>
-          <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">{stats?.client?.company_name}</h2>
-          <div className="grid grid-cols-2 gap-4 mb-6">
-            <div>
-              <p className="text-xs text-gray-500 uppercase tracking-wider">Status</p>
-              <p className="text-lg font-semibold text-gray-900 dark:text-white mt-1 capitalize">
-                {stats?.client?.status?.replace(/_/g, ' ')}
-              </p>
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+          <div>
+            <h1 className="text-2xl md:text-3xl font-black text-shimmer uppercase tracking-tight">Project Dashboard</h1>
+            <p className="text-gray-500 text-xs mt-1">Logged in as {stats?.client?.contact_person || user.name}</p>
+          </div>
+          
+          {/* New Task Notification for Internal Client */}
+          {newTaskAlert && (
+            <div className="bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 px-4 py-2 rounded-2xl text-xs font-bold uppercase tracking-wider flex items-center gap-2 animate-pulse shadow-[0_0_12px_rgba(16,185,129,0.15)]">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+              <span>New Task Added: {newTaskAlert}</span>
             </div>
-            <div>
-              <p className="text-xs text-gray-500 uppercase tracking-wider">Deadline</p>
-              <p className="text-lg font-semibold text-gray-900 dark:text-white mt-1">{stats?.client?.deadline || '—'}</p>
+          )}
+        </div>
+
+        {/* Overall Project Progress Status Bar */}
+        {selectedTask && (
+          <div className="w-full bg-white/80 dark:bg-[#11131E]/60 border border-indigo-500/20 dark:border-indigo-500/10 p-5 rounded-3xl shadow-[0_8px_30px_rgba(99,102,241,0.06)] relative overflow-hidden backdrop-blur-md">
+            <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/5 via-purple-500/2 to-pink-500/5 opacity-70"></div>
+            <div className="absolute top-0 bottom-0 left-0 w-1 bg-gradient-to-b from-indigo-500 via-purple-500 to-pink-500"></div>
+            <div className="relative z-10 pl-2">
+              <div className="flex justify-between items-center mb-2.5">
+                <div>
+                  <p className="text-[9px] uppercase tracking-widest text-indigo-600 dark:text-indigo-400 font-extrabold flex items-center gap-1.5">
+                    <span className="relative flex h-1.5 w-1.5">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-indigo-500"></span>
+                    </span>
+                    <span>Overall Project Progress</span>
+                  </p>
+                  <h3 className="text-sm font-black text-gray-900 dark:text-white mt-1 flex items-center gap-1.5 uppercase tracking-tight">
+                    <span>🚀</span> Status: {progress === 100 ? 'Completed 🎉' : selectedTask.status.replace(/_/g, ' ')}
+                  </h3>
+                </div>
+                <span className="text-[10px] font-black text-white bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 shadow-md shadow-indigo-500/30 px-3 py-1.5 rounded-full">
+                  {progress}% Complete
+                </span>
+              </div>
+              
+              {/* Progress Bar Track */}
+              <div className="w-full h-3.5 bg-slate-100 dark:bg-white/5 rounded-full overflow-hidden relative border border-gray-200/40 dark:border-white/5 p-[2px]">
+                <div 
+                  className="h-full rounded-full bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 shadow-[0_0_12px_rgba(168,85,247,0.5)] transition-all duration-1000 ease-out relative"
+                  style={{ width: `${progress}%` }}
+                >
+                  <div className="absolute inset-0 bg-[linear-gradient(90deg,transparent_0%,rgba(255,255,255,0.4)_50%,transparent_100%)] animate-shimmer"></div>
+                </div>
+              </div>
             </div>
+            <style dangerouslySetInnerHTML={{__html: `
+              @keyframes progress-shimmer {
+                0% { background-position: -200% 0; }
+                100% { background-position: 200% 0; }
+              }
+              .animate-shimmer {
+                background-size: 200% 100%;
+                animation: progress-shimmer 3s infinite linear;
+              }
+            `}} />
+          </div>
+        )}
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Main Info Column */}
+          <div className="lg:col-span-2 space-y-6">
+            <GlowCard className="p-6" goldBorder>
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+                <h2 className="text-xl font-bold text-gray-900 dark:text-white">{stats?.client?.company_name}</h2>
+                
+                {/* Auto Open switch inside internal dashboard */}
+                <button 
+                  type="button"
+                  onClick={() => setAutoOpenNew(!autoOpenNew)}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[9px] font-black uppercase tracking-wider border transition-all duration-300 ${
+                    autoOpenNew 
+                      ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20 shadow-[0_0_8px_rgba(16,185,129,0.15)] hover:bg-emerald-500/20' 
+                      : 'bg-slate-100 dark:bg-white/5 text-gray-400 border-transparent hover:bg-slate-200 dark:hover:bg-white/10'
+                  }`}
+                  title="When a new task is created, automatically switch focus to it"
+                >
+                  <span className={`w-1.5 h-1.5 rounded-full ${autoOpenNew ? 'bg-emerald-400 animate-pulse' : 'bg-gray-400'}`}></span>
+                  <span>Auto-Open New Tasks</span>
+                </button>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4 mb-6">
+                <div>
+                  <p className="text-xs text-gray-500 uppercase tracking-wider">Status</p>
+                  <p className="text-lg font-semibold text-gray-900 dark:text-white mt-1 capitalize">
+                    {selectedTask ? selectedTask.status.replace(/_/g, ' ') : stats?.client?.status?.replace(/_/g, ' ')}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500 uppercase tracking-wider">Deadline</p>
+                  <p className="text-lg font-semibold text-gray-900 dark:text-white mt-1">
+                    {selectedTask?.due_date ? new Date(selectedTask.due_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : stats?.client?.deadline || '—'}
+                  </p>
+                </div>
+              </div>
+
+              {/* Project Execution Pipeline Stepper */}
+              <div className="mb-6 bg-gray-50/50 dark:bg-white/[0.01] p-5 rounded-2xl border border-gray-100 dark:border-white/5 shadow-sm">
+                <CardTitle>Project Execution Pipeline</CardTitle>
+                
+                {/* Task selector badges */}
+                {clientTasks.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mb-6 bg-gray-100/50 dark:bg-white/[0.02] p-3 rounded-xl border border-gray-200/50 dark:border-white/5">
+                    <span className="text-xs text-gray-400 font-bold self-center mr-1">View Task Status:</span>
+                    {clientTasks.map((t: any) => {
+                      const isSel = selectedTaskId === t.id;
+                      return (
+                        <button
+                          key={t.id}
+                          onClick={() => setSelectedTaskId(isSel ? null : t.id)}
+                          className={`inline-flex items-center text-xs font-semibold px-3 py-1.5 rounded-lg border transition-all cursor-pointer ${
+                            isSel
+                              ? 'bg-indigo-600 text-white border-indigo-700 shadow-md scale-105 font-bold'
+                              : 'bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-200/50 dark:border-indigo-500/20 shadow-sm opacity-85 hover:opacity-100 hover:scale-105'
+                          }`}
+                        >
+                          📋 {t.title} {isSel && '✓'}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {/* Stepper display */}
+                <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
+                  {STAGES.map(stage => {
+                    let isCurrent = false;
+                    let isCompleted = false;
+                    let isInProgress = false;
+
+                    if (selectedTask) {
+                      const status = getStageStatusForTask(selectedTask, stage);
+                      isCompleted = status === 'completed';
+                      isInProgress = status === 'in_progress';
+                    } else {
+                      isCurrent = stats?.client?.status === stage;
+                      const currentIndex = STAGES.indexOf(stats?.client?.status || '');
+                      const thisIndex = STAGES.indexOf(stage);
+                      isCompleted = thisIndex < currentIndex;
+                      isInProgress = isCurrent;
+                    }
+
+                    return (
+                      <div
+                        key={stage}
+                        className={`p-3.5 rounded-xl border text-center transition-all shadow-sm ${
+                          isCompleted
+                            ? 'bg-emerald-500 border-emerald-600 text-white shadow-md'
+                            : isInProgress
+                            ? 'bg-amber-500 border-amber-600 text-white shadow-md animate-pulse font-bold'
+                            : 'bg-gray-50 dark:bg-white/[0.02] border-gray-200 dark:border-white/5 text-gray-500 dark:text-gray-400'
+                        }`}
+                      >
+                        <div className="text-[10px] uppercase font-black tracking-wider opacity-90">
+                          {stage.replace(/_/g, ' ')}
+                        </div>
+                        <div className="text-[9px] mt-1 font-bold uppercase opacity-80">
+                          {isCompleted ? '✓ Completed' : isInProgress ? '● Active' : '○ Pending'}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {selectedTask?.description && (
+                <div className="mt-4 border-t border-gray-100 dark:border-white/5 pt-4">
+                  <p className="text-[8px] text-gray-400 dark:text-gray-500 uppercase tracking-widest font-extrabold mb-1">Task Description</p>
+                  <p className="text-xs text-gray-600 dark:text-gray-300 leading-relaxed bg-slate-50 dark:bg-white/[0.01] border border-gray-100 dark:border-white/5 p-4 rounded-xl">
+                    {selectedTask.description}
+                  </p>
+                </div>
+              )}
+            </GlowCard>
           </div>
 
-          {/* Project Execution Pipeline Stepper */}
-          <div className="mb-8 bg-gray-50/50 dark:bg-white/[0.01] p-5 rounded-2xl border border-gray-100 dark:border-white/5 shadow-sm">
-            <CardTitle>Project Execution Pipeline</CardTitle>
-            
-            {/* Task selector badges (if multiple tasks) */}
-            {clientTasks.length > 0 && (
-              <div className="flex flex-wrap gap-2 mb-6 bg-gray-100/50 dark:bg-white/[0.02] p-3 rounded-xl border border-gray-200/50 dark:border-white/5">
-                <span className="text-xs text-gray-400 font-bold self-center mr-1">View Task Status:</span>
-                {clientTasks.map((t: any) => {
-                  const isSel = selectedTaskId === t.id;
-                  return (
-                    <button
-                      key={t.id}
-                      onClick={() => setSelectedTaskId(isSel ? null : t.id)}
-                      className={`inline-flex items-center text-xs font-semibold px-3 py-1.5 rounded-lg border transition-all cursor-pointer ${
-                        isSel
-                          ? 'bg-amber-500 text-white border-amber-600 shadow-md scale-105 font-bold'
-                          : 'bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-200/50 dark:border-amber-500/20 shadow-sm opacity-85 hover:opacity-100 hover:scale-105'
-                      }`}
-                    >
-                      📋 {t.title} {isSel && '✓'}
-                    </button>
-                  );
-                })}
+          {/* Sidebar / Metadata Cards Column */}
+          <div className="space-y-6">
+            {selectedTask && (
+              <div className="space-y-4">
+                <p className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider px-1">Selected Task Details</p>
+                
+                {/* Estimated Deadline Card */}
+                <div className="p-4 bg-white/60 dark:bg-[#11131E]/60 backdrop-blur-md border border-amber-500/30 dark:border-amber-500/20 rounded-2xl flex items-center gap-4 shadow-sm hover:shadow-[0_8px_25px_rgba(245,158,11,0.15)] transition-all duration-300 hover:-translate-y-1 hover:scale-[1.02] relative overflow-hidden group">
+                  <div className="absolute inset-0 bg-gradient-to-br from-amber-500/10 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                  <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-amber-500 to-orange-500 text-white flex items-center justify-center flex-shrink-0 shadow-lg shadow-amber-500/20 transition-all duration-300 group-hover:scale-110 group-hover:rotate-3">
+                    <FiCalendar size={20} />
+                  </div>
+                  <div className="relative z-10">
+                    <p className="text-[8px] uppercase tracking-[0.1em] text-amber-600 dark:text-amber-400 font-extrabold">Estimated Deadline</p>
+                    <p className="text-xs font-extrabold text-gray-800 dark:text-gray-100 mt-1">
+                      {selectedTask.due_date ? new Date(selectedTask.due_date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : 'Flexible'}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Project Manager Card */}
+                <div className="p-4 bg-white/60 dark:bg-[#11131E]/60 backdrop-blur-md border border-blue-500/30 dark:border-blue-500/20 rounded-2xl flex items-center gap-4 shadow-sm hover:shadow-[0_8px_25px_rgba(59,130,246,0.15)] transition-all duration-300 hover:-translate-y-1 hover:scale-[1.02] relative overflow-hidden group">
+                  <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                  <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-500 text-white flex items-center justify-center flex-shrink-0 shadow-lg shadow-blue-500/20 transition-all duration-300 group-hover:scale-110 group-hover:rotate-3">
+                    <FiUser size={20} />
+                  </div>
+                  <div className="relative z-10">
+                    <p className="text-[8px] uppercase tracking-[0.1em] text-blue-600 dark:text-blue-400 font-extrabold">Project Manager</p>
+                    <p className="text-xs font-extrabold text-gray-800 dark:text-gray-100 mt-1">
+                      {selectedTask.assigned_by_name || 'System PM'}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Assigned Lead Card */}
+                <div className="p-4 bg-white/60 dark:bg-[#11131E]/60 backdrop-blur-md border border-purple-500/30 dark:border-purple-500/20 rounded-2xl flex items-center gap-4 shadow-sm hover:shadow-[0_8px_25px_rgba(168,85,247,0.15)] transition-all duration-300 hover:-translate-y-1 hover:scale-[1.02] relative overflow-hidden group">
+                  <div className="absolute inset-0 bg-gradient-to-br from-purple-500/10 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                  <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 text-white flex items-center justify-center flex-shrink-0 shadow-lg shadow-purple-500/20 transition-all duration-300 group-hover:scale-110 group-hover:rotate-3">
+                    <FiClock size={20} />
+                  </div>
+                  <div className="relative z-10">
+                    <p className="text-[8px] uppercase tracking-[0.1em] text-purple-600 dark:text-purple-400 font-extrabold">Assigned Lead</p>
+                    <p className="text-xs font-extrabold text-gray-800 dark:text-gray-100 mt-1">
+                      {selectedTask.assigned_name || 'Assigned Lead'}
+                    </p>
+                  </div>
+                </div>
               </div>
             )}
 
-            {/* Stepper display */}
-            <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
-              {STAGES.map(stage => {
-                let isCurrent = false;
-                let isCompleted = false;
-                let isInProgress = false;
-
-                if (selectedTask) {
-                  const status = getStageStatusForTask(selectedTask, stage);
-                  isCompleted = status === 'completed';
-                  isInProgress = status === 'in_progress';
-                } else {
-                  isCurrent = stats?.client?.status === stage;
-                  const currentIndex = STAGES.indexOf(stats?.client?.status || '');
-                  const thisIndex = STAGES.indexOf(stage);
-                  isCompleted = thisIndex < currentIndex;
-                  isInProgress = isCurrent;
-                }
-
-                return (
-                  <div
-                    key={stage}
-                    className={`p-3.5 rounded-xl border text-center transition-all shadow-sm ${
-                      isCompleted
-                        ? 'bg-emerald-500 border-emerald-600 text-white shadow-md'
-                        : isInProgress
-                        ? 'bg-amber-500 border-amber-600 text-white shadow-md animate-pulse font-bold'
-                        : 'bg-gray-50 dark:bg-white/[0.02] border-gray-200 dark:border-white/5 text-gray-500 dark:text-gray-400'
-                    }`}
-                  >
-                    <div className="text-[10px] uppercase font-black tracking-wider opacity-90">
-                      {stage.replace(/_/g, ' ')}
-                    </div>
-                    <div className="text-[9px] mt-1 font-bold uppercase opacity-80">
-                      {isCompleted ? '✓ Completed' : isInProgress ? '● Active' : '○ Pending'}
-                    </div>
+            <GlowCard className="p-6">
+              <CardTitle>Progress by Department</CardTitle>
+              {stats?.taskStats?.by_department?.map((dept: any) => (
+                <div key={dept.department} className="mb-4">
+                  <div className="flex justify-between mb-1.5">
+                    <span className="text-sm font-medium text-gray-900 dark:text-white">{dept.department}</span>
+                    <span className="text-xs text-gray-500">{dept.completed}/{dept.total}</span>
                   </div>
-                );
-              })}
-            </div>
+                  <div className="w-full h-2 rounded-full bg-gray-100 dark:bg-white/8 overflow-hidden relative">
+                    <div className="h-2 rounded-full transition-all duration-500 bg-gradient-to-r from-indigo-500 to-purple-500"
+                      style={{ width: `${dept.total > 0 ? (dept.completed / dept.total) * 100 : 0}%` }} />
+                  </div>
+                </div>
+              ))}
+            </GlowCard>
           </div>
-
-          <CardTitle>Progress by Department</CardTitle>
-          {stats?.taskStats?.by_department?.map((dept: any) => (
-            <div key={dept.department} className="mb-4">
-              <div className="flex justify-between mb-1.5">
-                <span className="text-sm font-medium text-gray-900 dark:text-white">{dept.department}</span>
-                <span className="text-xs text-gray-500">{dept.completed}/{dept.total}</span>
-              </div>
-              <div className="w-full h-2 rounded-full bg-gray-100 dark:bg-white/8">
-                <div className="h-2 rounded-full transition-all duration-500"
-                  style={{ width: `${dept.total > 0 ? (dept.completed / dept.total) * 100 : 0}%`, background: 'linear-gradient(90deg, #6366F1, #8B5CF6)' }} />
-              </div>
-            </div>
-          ))}
-        </GlowCard>
+        </div>
       </div>
     );
   }

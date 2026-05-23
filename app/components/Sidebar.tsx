@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation';
 import { FiHome, FiUsers, FiCheckSquare, FiClock, FiBarChart2, FiLogOut, FiMoon, FiSun, FiGrid, FiSettings, FiCalendar, FiActivity, FiUmbrella, FiShield, FiMessageSquare, FiPieChart, FiChevronDown, FiChevronRight, FiDollarSign, FiUser, FiGlobe, FiFolder, FiTrendingUp, FiHardDrive, FiX, FiFileText } from 'react-icons/fi';
 import { useAuth } from '../utils/AuthContext';
 import { useState, useEffect } from 'react';
-import { domainAPI, announcementAPI, taskAPI } from '../utils/api';
+import { domainAPI, announcementAPI, taskAPI, API_URL } from '../utils/api';
 
 const ROLE_COLORS: Record<string, string> = {
   admin:          'bg-red-500/20 text-red-400 border-red-500/30',
@@ -122,7 +122,6 @@ export default function Sidebar({ isOpen, setIsOpen }: { isOpen: boolean, setIsO
 
   const initials = user?.name?.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase() || '?';
   const avatarColor = AVATAR_COLORS[(user?.name?.charCodeAt(0) || 0) % AVATAR_COLORS.length];
-  const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
   const profileImgUrl = user?.profile_image
     ? (user.profile_image.startsWith('data:') ? user.profile_image : `${API_URL}/auth/profile/image/${user.profile_image}`)
     : null;

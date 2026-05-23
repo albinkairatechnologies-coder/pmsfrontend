@@ -2,13 +2,11 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../../utils/AuthContext';
-import { authAPI, rewardsAPI } from '../../utils/api';
+import { authAPI, rewardsAPI, API_URL } from '../../utils/api';
 import {
   FiUser, FiMail, FiPhone, FiLock, FiSave, FiBriefcase, FiAward,
   FiActivity, FiCamera, FiMapPin, FiCalendar, FiAlertCircle, FiEdit2
 } from 'react-icons/fi';
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
 
 export default function ProfilePage() {
   const { user, refreshUser } = useAuth();

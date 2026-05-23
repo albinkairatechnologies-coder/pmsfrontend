@@ -1,6 +1,16 @@
 import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+export const API_URL = typeof window !== 'undefined'
+  ? (() => {
+      const hostname = window.location.hostname;
+      const isLocal = hostname === 'localhost' || hostname === '127.0.0.1' || hostname.startsWith('192.168.') || hostname.startsWith('10.') || hostname.endsWith('.local');
+      if (isLocal) {
+        return process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+      }
+      return '/pms/api';
+    })()
+  : (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api');
+
 
 // ── Axios instance ────────────────────────────────────────────
 const api = axios.create({

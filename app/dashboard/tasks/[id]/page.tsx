@@ -2,13 +2,13 @@
 
 import React, { useEffect, useState, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { taskAPI, orgAPI, rewardsAPI, messageAPI } from '../../../utils/api';
+import { taskAPI, orgAPI, rewardsAPI, messageAPI, API_URL } from '../../../utils/api';
 import { useAuth } from '../../../utils/AuthContext';
 import { 
   FiClock, FiUser, FiCalendar, FiActivity, FiUsers, 
   FiEye, FiPlus, FiSend, FiPaperclip, FiMoreHorizontal,
   FiVideo, FiSearch, FiLayout, FiCheckCircle, FiMic, FiSmile, FiBell, FiList, FiAward, FiX, FiTrash2, FiCornerUpRight,
-  FiDownload, FiFile, FiImage, FiCopy, FiEdit2
+  FiDownload, FiFile, FiImage, FiCopy, FiEdit2, FiLock, FiLink
 } from 'react-icons/fi';
 
 // Secure image component that fetches with JWT headers to display native images in task chat
@@ -21,7 +21,6 @@ function SecureImage({ filename, alt }: { filename: string; alt: string }) {
     const fetchImage = async () => {
       try {
         const token = localStorage.getItem('token');
-        const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
         const res = await fetch(`${API_URL}/messages/attachments/${filename}`, {
           headers: { Authorization: `Bearer ${token}` }
         });
@@ -102,6 +101,8 @@ export default function TaskDetailPage() {
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [editingMessage, setEditingMessage] = useState<any>(null);
+
+  const [copied, setCopied] = useState(false);
 
   // Pipeline State Variables
   const [pipelineStages, setPipelineStages] = useState<any[]>([]);
@@ -209,8 +210,20 @@ export default function TaskDetailPage() {
         responsible_person_id: editResponsible ? Number(editResponsible) : null,
         status: editStatus
       });
+      
       prevStageNameRef.current = '';
-      await loadPipeline();
+      const res = await taskAPI.getPipeline(Number(id));
+      setPipelineStages(res.data);
+      
+      const updated = res.data.find((s: any) => s.stage_name === selectedStage.stage_name);
+      if (updated) {
+        setSelectedStage(updated);
+        setEditStartDate(updated.start_date ? updated.start_date.split('T')[0] : '');
+        setEditEndDate(updated.end_date ? updated.end_date.split('T')[0] : '');
+        setEditResponsible(updated.responsible_person_id ? String(updated.responsible_person_id) : '');
+        setEditStatus(updated.status || 'pending');
+      }
+      
       await loadTask();
       await loadMessages();
     } catch (err) {
@@ -353,7 +366,6 @@ export default function TaskDetailPage() {
   const handleDownload = async (filename: string, originalName: string) => {
     try {
       const token = localStorage.getItem('token');
-      const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
       const res = await fetch(`${API_URL}/messages/attachments/${filename}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -644,6 +656,39 @@ export default function TaskDetailPage() {
                         })()}
                       </span>
                     </button>
+                </div>
+
+                {/* Magic Tracking Link */}
+                <div className="flex items-center group">
+                    <span className="w-24 text-[12px] font-medium text-gray-400 dark:text-gray-500 flex-shrink-0">Tracking:</span>
+                    {task.status === 'pending' ? (
+                        <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-bold bg-gray-100 dark:bg-white/5 text-gray-400 dark:text-gray-500 border border-gray-200 dark:border-white/5 cursor-not-allowed">
+                            <FiLock size={12} className="flex-shrink-0 text-gray-400 dark:text-gray-500" />
+                            <span>Locked (Start Task First)</span>
+                        </div>
+                    ) : (
+                        <button 
+                          onClick={() => {
+                            const link = `${window.location.origin}/track/${task.client_tracking_token}`;
+                            navigator.clipboard.writeText(link);
+                            setCopied(true);
+                            setTimeout(() => setCopied(false), 2000);
+                          }}
+                          className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl text-[11px] font-bold bg-amber-50 hover:bg-amber-100 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-100 dark:border-transparent shadow-sm hover:shadow active:scale-[0.98] transition-all"
+                        >
+                          {copied ? (
+                            <>
+                              <FiCheckCircle size={12} className="stroke-[2.5] text-emerald-500" />
+                              <span className="text-emerald-500 font-bold">Copied! ✓</span>
+                            </>
+                          ) : (
+                            <>
+                              <FiLink size={12} className="stroke-[2.5]" />
+                              <span>Copy Magic Link</span>
+                            </>
+                          )}
+                        </button>
+                    )}
                 </div>
             </div>
 

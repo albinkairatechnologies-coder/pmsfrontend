@@ -2,11 +2,9 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../../utils/AuthContext';
-import { messageAPI } from '../../utils/api';
+import { messageAPI, API_URL } from '../../utils/api';
 import { FiSend, FiSearch, FiMoreVertical, FiPaperclip, FiSmile, FiCheck, FiArrowLeft, FiUser, FiMessageSquare, FiShield, FiClock, FiDownload, FiFile, FiImage, FiX, FiEdit2, FiPlus, FiUsers, FiTrash2, FiCornerUpRight } from 'react-icons/fi';
 import GlowCard from '../../components/GlowCard';
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
 
 const COMMON_EMOJIS = ['😊', '😂', '👍', '🔥', '❤️', '🙌', '🎉', '💻', '🚀', '✅', '✨', '🤔', '👋', '🙏', '💯', '🌟', '🤯', '😎', '💡', '📢'];
 

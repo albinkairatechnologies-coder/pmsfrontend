@@ -140,7 +140,7 @@ export default function ClientsPage() {
 
   const handleStageUpdate = async (clientId: number, stage: string) => {
     const client = clients.find(c => c.id === clientId);
-    const selectedTaskId = selectedTaskIds[clientId];
+    const selectedTaskId = selectedTaskIds[clientId] || (client?.tasks && client.tasks.length > 0 ? client.tasks[0].id : undefined);
     const selectedTask = client?.tasks?.find((t: any) => t.id === selectedTaskId);
 
     if (selectedTask) {
@@ -193,107 +193,112 @@ export default function ClientsPage() {
 
       {/* Client list */}
       <div className="space-y-4">
-        {clients.map(client => (
-          <div key={client.id} className="card p-0 overflow-hidden">
-            {/* Client row */}
-            <div className="p-5">
-              <div className="flex items-start justify-between gap-4">
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-3 flex-wrap">
-                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{client.company_name}</h3>
-                    <span className="text-xs px-2.5 py-0.5 rounded-full font-medium bg-primary-100 dark:bg-primary-500/20 text-primary-700 dark:text-primary-400">
-                      {client.status?.replace(/_/g, ' ')}
-                    </span>
+        {clients.map(client => {
+          const selectedTaskId = selectedTaskIds[client.id] || (client.tasks && client.tasks.length > 0 ? client.tasks[0].id : undefined);
+          const selectedTask = client.tasks?.find((t: any) => t.id === selectedTaskId);
+          return (
+            <div key={client.id} className="card p-0 overflow-hidden">
+              {/* Client row */}
+              <div className="p-5">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-3 flex-wrap">
+                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{client.company_name}</h3>
+                      <span className="text-xs px-2.5 py-0.5 rounded-full font-medium bg-primary-100 dark:bg-primary-500/20 text-primary-700 dark:text-primary-400">
+                        {client.status?.replace(/_/g, ' ')}
+                      </span>
+                    </div>
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mt-0.5">{client.contact_person}</p>
+                    <p className="text-xs text-gray-400 mt-0.5">{client.email} {client.phone ? `· ${client.phone}` : ''}</p>
+                    {selectedTask && (
+                      <p className="text-xs font-semibold text-amber-600 dark:text-amber-500 mt-1 flex items-center gap-1">
+                        <span>📋</span> Active Project: <span className="underline">{selectedTask.title}</span>
+                      </p>
+                    )}
+                    {client.tasks && client.tasks.length > 0 && (
+                      <div className="flex flex-wrap gap-1.5 mt-2">
+                        {client.tasks.map((task: any) => {
+                          const isSelected = selectedTaskId === task.id;
+                          return (
+                            <button
+                              key={task.id}
+                              onClick={() => {
+                                setSelectedTaskIds(prev => ({
+                                  ...prev,
+                                  [client.id]: task.id
+                                }));
+                              }}
+                              className={`inline-flex items-center text-[10px] font-semibold px-2 py-0.5 rounded-md border transition-all cursor-pointer ${
+                                isSelected
+                                  ? 'bg-amber-500 text-white border-amber-600 shadow-md scale-105 font-bold'
+                                  : 'bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-200/50 dark:border-amber-500/20 shadow-sm opacity-75 hover:opacity-100 hover:scale-105'
+                              }`}
+                              title={task.description}
+                            >
+                              📋 {task.title} {isSelected && '✓'}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
-                  <p className="text-sm text-gray-600 dark:text-gray-400 mt-0.5">{client.contact_person}</p>
-                  <p className="text-xs text-gray-400 mt-0.5">{client.email} {client.phone ? `· ${client.phone}` : ''}</p>
-                  {client.tasks && client.tasks.length > 0 && (
-                    <div className="flex flex-wrap gap-1.5 mt-2">
-                      {client.tasks.map((task: any) => {
-                        const isSelected = selectedTaskIds[client.id] === task.id;
-                        return (
-                          <button
-                            key={task.id}
-                            onClick={() => {
-                              setSelectedTaskIds(prev => ({
-                                ...prev,
-                                [client.id]: isSelected ? undefined : task.id
-                              }));
-                            }}
-                            className={`inline-flex items-center text-[10px] font-semibold px-2 py-0.5 rounded-md border transition-all cursor-pointer ${
-                              isSelected
-                                ? 'bg-amber-500 text-white border-amber-600 shadow-md scale-105 font-bold'
-                                : 'bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-200/50 dark:border-amber-500/20 shadow-sm opacity-75 hover:opacity-100 hover:scale-105'
-                            }`}
-                            title={task.description}
-                          >
-                            📋 {task.title} {isSelected && '✓'}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
 
-                <div className="flex items-center gap-2 flex-shrink-0">
-                  {/* Send Proposal button — admin sees all, crm sees all (backend enforces assignment) */}
-                  {(isAdmin || user?.role === 'crm_head') && (
-                    <button
-                      onClick={() => setSendTarget(client)}
-                      className="btn-gold gap-2 text-xs py-2 px-3">
-                      <FiSend size={13} /> Send Proposal
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    {/* Send Proposal button — admin sees all, crm sees all (backend enforces assignment) */}
+                    {(isAdmin || user?.role === 'crm_head') && (
+                      <button
+                        onClick={() => setSendTarget(client)}
+                        className="btn-gold gap-2 text-xs py-2 px-3">
+                        <FiSend size={13} /> Send Proposal
+                      </button>
+                    )}
+                    {['admin','marketing_head','crm_head','team_lead'].includes(user?.role || '') && (
+                      <Link href={`/dashboard/clients/${client.id}`}
+                        className="btn-secondary gap-2 text-xs py-2 px-3 flex items-center">
+                        <FiUser size={13} /> Profiles
+                      </Link>
+                    )}
+                    <button onClick={() => toggleExpand(client.id)}
+                      className="p-2 rounded-xl text-gray-400 hover:text-gray-600 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-white/5 transition-all">
+                      {expandedId === client.id ? <FiChevronUp size={16} /> : <FiChevronDown size={16} />}
                     </button>
-                  )}
-                  {['admin','marketing_head','crm_head','team_lead'].includes(user?.role || '') && (
-                    <Link href={`/dashboard/clients/${client.id}`}
-                      className="btn-secondary gap-2 text-xs py-2 px-3 flex items-center">
-                      <FiUser size={13} /> Profiles
-                    </Link>
-                  )}
-                  <button onClick={() => toggleExpand(client.id)}
-                    className="p-2 rounded-xl text-gray-400 hover:text-gray-600 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-white/5 transition-all">
-                    {expandedId === client.id ? <FiChevronUp size={16} /> : <FiChevronDown size={16} />}
-                  </button>
+                  </div>
                 </div>
-              </div>
 
-              {/* Stage pipeline */}
-              <div className="flex gap-1.5 mt-4 overflow-x-auto pb-1">
-                {STAGES.map(stage => {
-                  const selectedTaskId = selectedTaskIds[client.id];
-                  const selectedTask = client.tasks?.find((t: any) => t.id === selectedTaskId);
-                  
-                  let stageStyle = '';
-                  let displayStatus = '';
-                  
-                  if (selectedTask) {
-                    const status = getStageStatusForTask(selectedTask, stage);
-                    displayStatus = ` (${status.replace(/_/g, ' ')})`;
-                    if (status === 'completed') {
-                      stageStyle = 'bg-emerald-500 text-white shadow-sm';
-                    } else if (status === 'in_progress') {
-                      stageStyle = 'bg-amber-500 text-white shadow-sm font-bold animate-pulse';
+                {/* Stage pipeline */}
+                <div className="flex gap-1.5 mt-4 overflow-x-auto pb-1">
+                  {STAGES.map(stage => {
+                    let stageStyle = '';
+                    let displayStatus = '';
+                    
+                    if (selectedTask) {
+                      const status = getStageStatusForTask(selectedTask, stage);
+                      displayStatus = ` (${status.replace(/_/g, ' ')})`;
+                      if (status === 'completed') {
+                        stageStyle = 'bg-emerald-500 text-white shadow-sm';
+                      } else if (status === 'in_progress') {
+                        stageStyle = 'bg-amber-500 text-white shadow-sm font-bold animate-pulse';
+                      } else {
+                        stageStyle = 'bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500';
+                      }
                     } else {
-                      stageStyle = 'bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500';
+                      stageStyle = client.status === stage
+                        ? 'bg-primary-500 text-white shadow-sm'
+                        : 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-500';
                     }
-                  } else {
-                    stageStyle = client.status === stage
-                      ? 'bg-primary-500 text-white shadow-sm'
-                      : 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-500';
-                  }
 
-                  return (
-                    <div key={stage}
-                      onClick={() => canModify && handleStageUpdate(client.id, stage)}
-                      className={`px-2.5 py-1 rounded-lg text-xs whitespace-nowrap font-medium transition-all ${stageStyle} ${
-                        canModify ? 'cursor-pointer hover:bg-primary-400 hover:text-white' : ''
-                      }`}
-                    >
-                      {stage.replace(/_/g, ' ')}{displayStatus}
-                    </div>
-                  );
-                })}
-              </div>
+                    return (
+                      <div key={stage}
+                        onClick={() => canModify && handleStageUpdate(client.id, stage)}
+                        className={`px-2.5 py-1 rounded-lg text-xs whitespace-nowrap font-medium transition-all ${stageStyle} ${
+                          canModify ? 'cursor-pointer hover:bg-primary-400 hover:text-white' : ''
+                        }`}
+                      >
+                        {stage.replace(/_/g, ' ')}{displayStatus}
+                      </div>
+                    );
+                  })}
+                </div>
 
               {/* Meta row */}
               <div className="grid grid-cols-3 gap-4 mt-4 pt-4 border-t border-gray-50 dark:border-gray-800">
@@ -365,7 +370,8 @@ export default function ClientsPage() {
               </div>
             )}
           </div>
-        ))}
+        );
+      })}
       </div>
 
       {/* Add Client Modal */}

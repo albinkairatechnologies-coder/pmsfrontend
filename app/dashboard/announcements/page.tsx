@@ -2,12 +2,10 @@
 
 import { useState, useEffect } from 'react';
 import { useAuth } from '../../utils/AuthContext';
-import { announcementAPI } from '../../utils/api';
+import { announcementAPI, API_URL } from '../../utils/api';
 import { FiPlus, FiTrash2, FiEdit2, FiMessageCircle, FiSend, FiSmile, FiX, FiInfo, FiClock, FiUser, FiCheck, FiBell, FiMessageSquare, FiHeart, FiEye, FiMapPin, FiSearch, FiBarChart2 } from 'react-icons/fi';
 
 const COMMON_EMOJIS = ['😊', '😂', '👍', '🔥', '❤️', '🙌', '🎉', '💻', '🚀', '✅', '✨', '📢', '💡', '💯', '🌟', '🙏', '👏', '🤝', '🎈', '❤️‍🔥'];
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
 
 export default function AnnouncementsPage() {
   const { user } = useAuth();
