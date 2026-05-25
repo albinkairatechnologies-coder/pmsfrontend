@@ -6,7 +6,8 @@ import axios from 'axios';
 import { 
   FiClock, FiCheckCircle, FiAlertCircle, FiUser, 
   FiCalendar, FiActivity, FiBriefcase, FiArrowLeft, FiList, 
-  FiMessageSquare, FiSend, FiPaperclip, FiDownload, FiFile, FiImage, FiLock, FiX
+  FiMessageSquare, FiSend, FiPaperclip, FiDownload, FiFile, FiImage, FiLock, FiX,
+  FiVideo
 } from 'react-icons/fi';
 import GlowCard from '../../components/GlowCard';
 import { API_URL } from '../../utils/api';
@@ -131,10 +132,24 @@ function SecureClientImage({ token, filename, alt }: { token: string; filename: 
   );
 }
 
+// Helper to parse naive datetime strings (which are stored in IST timezone on the backend)
+// so they display accurately in the client's local browser timezone.
+export const parseISTDate = (dateStr: string | Date | null | undefined): Date => {
+  if (!dateStr) return new Date();
+  if (dateStr instanceof Date) return dateStr;
+  let s = String(dateStr);
+  if (!s.includes('Z') && !s.includes('+') && !s.match(/-\d{2}:\d{2}$/)) {
+    if (s.includes(':')) {
+      s = s.includes('T') ? `${s}+05:30` : `${s.replace(' ', 'T')}+05:30`;
+    }
+  }
+  return new Date(s);
+};
+
 const formatDate = (dateStr: string | null) => {
   if (!dateStr) return 'Not set';
   try {
-    return new Date(dateStr).toLocaleDateString('en-US', {
+    return parseISTDate(dateStr).toLocaleDateString('en-US', {
       month: 'short',
       day: 'numeric',
       year: 'numeric'
@@ -196,6 +211,11 @@ export default function TrackPage() {
   const selectedTaskIdRef = useRef<number | null>(null);
   const autoOpenNewRef = useRef(true);
   const prevMaxTaskIdRef = useRef<number | null>(null);
+
+  // Video Call Integration States & Refs
+  const jitsiContainerRef = useRef<HTMLDivElement>(null);
+  const jitsiApiRef = useRef<any>(null);
+  const [showVideoCall, setShowVideoCall] = useState(false);
 
   useEffect(() => {
     selectedTaskIdRef.current = selectedTaskId;
@@ -337,6 +357,77 @@ export default function TrackPage() {
     }
   }, [selectedTaskId, token]);
 
+  // Video Call Integration
+  useEffect(() => {
+    if (showVideoCall) {
+      if ((window as any).JitsiMeetExternalAPI) {
+        initJitsi();
+        return;
+      }
+
+      const script = document.createElement('script');
+      script.src = "https://meet.jit.si/external_api.js";
+      script.async = true;
+      script.onload = () => {
+        initJitsi();
+      };
+      document.body.appendChild(script);
+
+      return () => {
+        if (script.parentNode) {
+          script.parentNode.removeChild(script);
+        }
+      };
+    }
+  }, [showVideoCall]);
+
+  const initJitsi = () => {
+    if (!jitsiContainerRef.current || !(window as any).JitsiMeetExternalAPI) return;
+
+    if (jitsiApiRef.current) {
+      jitsiApiRef.current.destroy();
+      jitsiApiRef.current = null;
+    }
+
+    const domain = "meet.jit.si";
+    const roomName = `KairaFlow_Task_${selectedTaskId}_MeetingRoom`;
+    const options = {
+      roomName: roomName,
+      width: '100%',
+      height: '100%',
+      parentNode: jitsiContainerRef.current,
+      userInfo: {
+        displayName: client?.contact_person || 'Client'
+      },
+      configOverwrite: {
+        startWithAudioMuted: false,
+        startWithVideoMuted: false,
+        prejoinPageEnabled: false,
+        disableThirdPartyRequests: true,
+      },
+      interfaceConfigOverwrite: {
+        MOBILE_APP_PROMO: false,
+        SHOW_JITSI_WATERMARK: false,
+        DEEP_LINKING_IMAGE_URL: '',
+      }
+    };
+
+    const api = new (window as any).JitsiMeetExternalAPI(domain, options);
+    jitsiApiRef.current = api;
+
+    api.addEventListener('videoConferenceLeft', () => {
+      closeVideoCall();
+    });
+  };
+
+  const closeVideoCall = () => {
+    if (jitsiApiRef.current) {
+      jitsiApiRef.current.destroy();
+      jitsiApiRef.current = null;
+    }
+    setShowVideoCall(false);
+  };
+
   const handleSendMessage = async (e?: React.FormEvent) => {
     e?.preventDefault();
     if (!newMessage.trim() || !selectedTaskId) return;
@@ -456,13 +547,24 @@ export default function TrackPage() {
             {client.company_name} Workspace
           </h1>
         </div>
-        <div className="flex items-center gap-3 px-4 py-2 bg-slate-50 dark:bg-white/[0.02] border border-gray-100 dark:border-white/5 rounded-2xl">
-          <FiBriefcase className="text-indigo-500" size={16} />
-          <div className="text-left hidden sm:block">
-            <p className="text-[8px] uppercase tracking-wider text-gray-400 font-extrabold">Active Client</p>
-            <p className="text-xs font-bold text-gray-800 dark:text-gray-200">
-              {client.contact_person}
-            </p>
+        <div className="flex items-center gap-3">
+          {selectedTaskId && (
+            <button
+              onClick={() => setShowVideoCall(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-[#8e44ad] hover:bg-[#732d91] text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all duration-200 active:scale-[0.98] shadow-md shadow-purple-500/10 mr-1"
+            >
+              <FiVideo size={14} className="stroke-[2.5]" />
+              <span>Join Call</span>
+            </button>
+          )}
+          <div className="flex items-center gap-3 px-4 py-2 bg-slate-50 dark:bg-white/[0.02] border border-gray-100 dark:border-white/5 rounded-2xl">
+            <FiBriefcase className="text-indigo-500" size={16} />
+            <div className="text-left hidden sm:block">
+              <p className="text-[8px] uppercase tracking-wider text-gray-400 font-extrabold">Active Client</p>
+              <p className="text-xs font-bold text-gray-800 dark:text-gray-200">
+                {client.contact_person}
+              </p>
+            </div>
           </div>
         </div>
       </header>
@@ -886,7 +988,7 @@ export default function TrackPage() {
                     const msgs = messages.filter(m => m.message_type !== 'subtask');
                     
                     return msgs.map((msg, i) => {
-                      const dateObj = new Date(msg.created_at);
+                      const dateObj = parseISTDate(msg.created_at);
                       const formattedDate = dateObj.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
                       let showDateSeparator = false;
                       
@@ -1052,6 +1154,42 @@ export default function TrackPage() {
         )}
 
       </div>
+
+      {/* Jitsi Meeting Overlay */}
+      {showVideoCall && (
+        <div className="fixed inset-0 bg-black/90 backdrop-blur-md z-[9999] flex flex-col p-4 md:p-6 animate-fade-in">
+          {/* Header */}
+          <div className="flex items-center justify-between px-5 py-4 border-b border-white/10 bg-gray-900/50 backdrop-blur-sm rounded-t-2xl">
+            <div className="flex items-center gap-3">
+              <div className="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse"></div>
+              <div>
+                <h2 className="text-sm font-black uppercase tracking-wider text-white">
+                  🎥 Live Client Meeting
+                </h2>
+                <p className="text-[9px] text-gray-400 font-bold uppercase mt-0.5 tracking-wide">
+                  Task: {activeTask?.title}
+                </p>
+              </div>
+            </div>
+            
+            <button 
+              onClick={() => {
+                if (confirm("Are you sure you want to end this call?")) {
+                  closeVideoCall();
+                }
+              }} 
+              className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all duration-200 active:scale-[0.98] shadow-lg shadow-red-500/20"
+            >
+              End Call
+            </button>
+          </div>
+
+          {/* Jitsi Meeting Frame */}
+          <div className="flex-1 bg-black rounded-b-2xl overflow-hidden relative border border-white/10 shadow-2xl mt-1">
+            <div ref={jitsiContainerRef} className="w-full h-full" />
+          </div>
+        </div>
+      )}
 
       {/* Premium Toast for New Task Alert */}
       {newTaskAlert && (

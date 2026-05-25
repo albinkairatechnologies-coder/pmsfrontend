@@ -11,6 +11,20 @@ import {
   FiDownload, FiFile, FiImage, FiCopy, FiEdit2, FiLock, FiLink
 } from 'react-icons/fi';
 
+// Helper to parse naive datetime strings (which are stored in IST timezone on the backend)
+// so they display accurately in the client's local browser timezone.
+export const parseISTDate = (dateStr: string | Date | null | undefined): Date => {
+  if (!dateStr) return new Date();
+  if (dateStr instanceof Date) return dateStr;
+  let s = String(dateStr);
+  if (!s.includes('Z') && !s.includes('+') && !s.match(/-\d{2}:\d{2}$/)) {
+    if (s.includes(':')) {
+      s = s.includes('T') ? `${s}+05:30` : `${s.replace(' ', 'T')}+05:30`;
+    }
+  }
+  return new Date(s);
+};
+
 // Secure image component that fetches with JWT headers to display native images in task chat
 function SecureImage({ filename, alt }: { filename: string; alt: string }) {
   const [src, setSrc] = useState<string>('');
@@ -104,6 +118,11 @@ export default function TaskDetailPage() {
 
   const [copied, setCopied] = useState(false);
 
+  // Video Call Integration States & Refs
+  const jitsiContainerRef = useRef<HTMLDivElement>(null);
+  const jitsiApiRef = useRef<any>(null);
+  const [showVideoCall, setShowVideoCall] = useState(false);
+
   // Pipeline State Variables
   const [pipelineStages, setPipelineStages] = useState<any[]>([]);
   const [showPipeline, setShowPipeline] = useState(false);
@@ -160,6 +179,77 @@ export default function TaskDetailPage() {
       setSelectedStage(matched || current || pipelineStages[0]);
     }
   }, [showPipeline, pipelineStages]);
+
+  // Video Call Integration
+  useEffect(() => {
+    if (showVideoCall) {
+      if ((window as any).JitsiMeetExternalAPI) {
+        initJitsi();
+        return;
+      }
+
+      const script = document.createElement('script');
+      script.src = "https://meet.jit.si/external_api.js";
+      script.async = true;
+      script.onload = () => {
+        initJitsi();
+      };
+      document.body.appendChild(script);
+
+      return () => {
+        if (script.parentNode) {
+          script.parentNode.removeChild(script);
+        }
+      };
+    }
+  }, [showVideoCall]);
+
+  const initJitsi = () => {
+    if (!jitsiContainerRef.current || !(window as any).JitsiMeetExternalAPI) return;
+
+    if (jitsiApiRef.current) {
+      jitsiApiRef.current.destroy();
+      jitsiApiRef.current = null;
+    }
+
+    const domain = "meet.jit.si";
+    const roomName = `KairaFlow_Task_${id}_MeetingRoom`;
+    const options = {
+      roomName: roomName,
+      width: '100%',
+      height: '100%',
+      parentNode: jitsiContainerRef.current,
+      userInfo: {
+        displayName: user?.name || 'Team Member'
+      },
+      configOverwrite: {
+        startWithAudioMuted: false,
+        startWithVideoMuted: false,
+        prejoinPageEnabled: false,
+        disableThirdPartyRequests: true,
+      },
+      interfaceConfigOverwrite: {
+        MOBILE_APP_PROMO: false,
+        SHOW_JITSI_WATERMARK: false,
+        DEEP_LINKING_IMAGE_URL: '',
+      }
+    };
+
+    const api = new (window as any).JitsiMeetExternalAPI(domain, options);
+    jitsiApiRef.current = api;
+
+    api.addEventListener('videoConferenceLeft', () => {
+      closeVideoCall();
+    });
+  };
+
+  const closeVideoCall = () => {
+    if (jitsiApiRef.current) {
+      jitsiApiRef.current.destroy();
+      jitsiApiRef.current = null;
+    }
+    setShowVideoCall(false);
+  };
 
   const loadTask = async () => {
     try {
@@ -347,7 +437,7 @@ export default function TaskDetailPage() {
 
   const formatDate = (dateStr: string) => {
     if (!dateStr) return 'No Date';
-    const d = new Date(dateStr);
+    const d = parseISTDate(dateStr);
     return d.toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' });
   };
 
@@ -607,7 +697,7 @@ export default function TaskDetailPage() {
                                 <span className="text-[13px] font-bold">{formatDate(task.due_date)}</span>
                             </div>
                         )}
-                        {task.due_date && new Date(task.due_date) < new Date() && (
+                        {task.due_date && parseISTDate(task.due_date) < new Date() && (
                             <div className="inline-flex items-center w-fit px-2 py-0.5 rounded-md bg-red-50 dark:bg-red-500/10 border border-red-100 dark:border-red-900/30 text-[10px] font-bold text-red-500 mt-0.5">Overdue</div>
                         )}
                     </div>
@@ -801,33 +891,36 @@ export default function TaskDetailPage() {
          {/* Patterned Background */}
          <div className="absolute inset-0 opacity-[0.15] dark:opacity-[0.05]" style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg width='120' height='120' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M11 18c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7z' fill='%23ffffff' fill-opacity='0.5'/%3E%3Cpath d='M45 65c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm30-40c2.2 0 4-1.8 4-4s-1.8-4-4-4-4 1.8-4 4 1.8 4 4 4z' fill='%23ffffff' fill-opacity='0.5'/%3E%3Cpath d='M20 80l5-5 5 5-5 5zM80 80l5-5 5 5-5 5zM50 20l5-5 5 5-5 5z' fill='%23ffffff' fill-opacity='0.5'/%3E%3C/svg%3E")` }} />
 
-         {/* Enhanced Header with Actions matching Reference Image */}
-         <div className="flex items-center justify-between px-6 py-3 bg-white/90 dark:bg-dark-card/90 backdrop-blur-xl border-b border-gray-200 dark:border-white/5 z-40 shadow-sm">
-            <div className="flex items-center gap-3">
-               <div className="w-10 h-10 bg-blue-100 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400 rounded-full flex items-center justify-center"><FiMessageSquare size={18}/></div>
-               <div>
-                  <h2 className="text-[14px] font-bold text-gray-900 dark:text-gray-100 tracking-tight leading-none mb-0.5">
-                    {activePanel === 'chat' ? 'Task chat' : activePanel === 'logs' ? 'Activity Logs' : activePanel === 'subtasks' ? 'Subtasks' : activePanel === 'history' ? 'History' : 'Alerts'}
-                  </h2>
-                  <p className="text-[11px] font-medium text-gray-500 dark:text-gray-400 opacity-80">{(task.participants?.length || 0) + 1} members</p>
-               </div>
-            </div>
-            
-            <div className="flex items-center gap-3">
-               {activePanel === 'chat' && (
-                 <div className="flex items-center gap-2">
-                    <button className="flex items-center gap-2 px-4 py-2 bg-[#8e44ad] hover:bg-[#732d91] text-white rounded-lg text-xs font-bold shadow-md transition-all">
-                       <FiVideo size={14} /> <span>Video call</span>
-                    </button>
-                    <div className="h-6 w-[1px] bg-gray-200 dark:bg-white/10 mx-1"></div>
-                    <button className="p-2 text-gray-400 hover:text-gray-700 dark:hover:text-white rounded-full transition-colors"><FiUsers size={16} /></button>
-                    <button className="p-2 text-gray-400 hover:text-gray-700 dark:hover:text-white rounded-full transition-colors"><FiSearch size={16} /></button>
-                 </div>
-               )}
-               {activePanel !== 'chat' && (
-                 <button onClick={() => setActivePanel('chat')} className="px-3 py-1.5 text-[11px] font-bold text-indigo-600 bg-indigo-50 dark:bg-indigo-500/10 rounded-lg hover:bg-indigo-100 transition-all">← Back to Chat</button>
-               )}
-            </div>
+          {/* Enhanced Header with Actions matching Reference Image */}
+          <div className="flex items-center justify-between px-6 py-3 bg-white/90 dark:bg-dark-card/90 backdrop-blur-xl border-b border-gray-200 dark:border-white/5 z-40 shadow-sm">
+             <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-blue-100 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400 rounded-full flex items-center justify-center"><FiMessageSquare size={18}/></div>
+                <div>
+                   <h2 className="text-[14px] font-bold text-gray-900 dark:text-gray-100 tracking-tight leading-none mb-0.5">
+                     {activePanel === 'chat' ? 'Task chat' : activePanel === 'logs' ? 'Activity Logs' : activePanel === 'subtasks' ? 'Subtasks' : activePanel === 'history' ? 'History' : 'Alerts'}
+                   </h2>
+                   <p className="text-[11px] font-medium text-gray-500 dark:text-gray-400 opacity-80">{(task.participants?.length || 0) + 1} members</p>
+                </div>
+             </div>
+             
+             <div className="flex items-center gap-3">
+                {activePanel === 'chat' && (
+                  <div className="flex items-center gap-2">
+                      <button 
+                        onClick={() => setShowVideoCall(true)}
+                        className="flex items-center gap-2 px-4 py-2 bg-[#8e44ad] hover:bg-[#732d91] text-white rounded-lg text-xs font-bold shadow-md transition-all"
+                      >
+                         <FiVideo size={14} /> <span>Video call</span>
+                      </button>
+                     <div className="h-6 w-[1px] bg-gray-200 dark:bg-white/10 mx-1"></div>
+                     <button className="p-2 text-gray-400 hover:text-gray-700 dark:hover:text-white rounded-full transition-colors"><FiUsers size={16} /></button>
+                     <button className="p-2 text-gray-400 hover:text-gray-700 dark:hover:text-white rounded-full transition-colors"><FiSearch size={16} /></button>
+                  </div>
+                )}
+                {activePanel !== 'chat' && (
+                  <button onClick={() => setActivePanel('chat')} className="px-3 py-1.5 text-[11px] font-bold text-indigo-600 bg-indigo-50 dark:bg-indigo-500/10 rounded-lg hover:bg-indigo-100 transition-all">← Back to Chat</button>
+                )}
+             </div>
          </div>
 
          {/* CHAT PANEL */}
@@ -839,7 +932,7 @@ export default function TaskDetailPage() {
                    const msgs = messages.filter(m => m.message_type !== 'subtask');
                    
                    return msgs.map((msg, i) => {
-                      const dateObj = new Date(msg.created_at);
+                      const dateObj = parseISTDate(msg.created_at);
                       const formattedDate = dateObj.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
                       let showDateSeparator = false;
                       
@@ -1399,6 +1492,41 @@ export default function TaskDetailPage() {
           </div>
         </div>
       )}
+        {/* Jitsi Meeting Overlay */}
+        {showVideoCall && (
+          <div className="fixed inset-0 bg-black/90 backdrop-blur-md z-[9999] flex flex-col p-4 md:p-6 animate-fade-in">
+            {/* Header */}
+            <div className="flex items-center justify-between px-5 py-4 border-b border-white/10 bg-gray-900/50 backdrop-blur-sm rounded-t-2xl">
+              <div className="flex items-center gap-3">
+                <div className="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse"></div>
+                <div>
+                  <h2 className="text-sm font-black uppercase tracking-wider text-white">
+                    🎥 Live Meeting
+                  </h2>
+                  <p className="text-[9px] text-gray-400 font-bold uppercase mt-0.5 tracking-wide">
+                    Task: {task?.title}
+                  </p>
+                </div>
+              </div>
+              
+              <button 
+                onClick={() => {
+                  if (confirm("Are you sure you want to end this call?")) {
+                    closeVideoCall();
+                  }
+                }} 
+                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all duration-200 active:scale-[0.98] shadow-lg shadow-red-500/20"
+              >
+                End Call
+              </button>
+            </div>
+
+            {/* Jitsi Meeting Frame */}
+            <div className="flex-1 bg-black rounded-b-2xl overflow-hidden relative border border-white/10 shadow-2xl mt-1">
+              <div ref={jitsiContainerRef} className="w-full h-full" />
+            </div>
+          </div>
+        )}
      </div>
    );
 }
