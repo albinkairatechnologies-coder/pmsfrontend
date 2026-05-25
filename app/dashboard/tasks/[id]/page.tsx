@@ -669,7 +669,10 @@ export default function TaskDetailPage() {
                     ) : (
                         <button 
                           onClick={() => {
-                            const link = `${window.location.origin}/track/${task.client_tracking_token}`;
+                            const isProductionPms = window.location.pathname.startsWith('/pms');
+                            const link = isProductionPms
+                              ? `${window.location.origin}/pms/track/${task.client_tracking_token}`
+                              : `${window.location.origin}/track/${task.client_tracking_token}`;
                             navigator.clipboard.writeText(link);
                             setCopied(true);
                             setTimeout(() => setCopied(false), 2000);
