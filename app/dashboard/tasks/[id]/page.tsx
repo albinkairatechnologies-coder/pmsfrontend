@@ -13,7 +13,7 @@ import {
 
 // Helper to parse naive datetime strings (which are stored in IST timezone on the backend)
 // so they display accurately in the client's local browser timezone.
-export const parseISTDate = (dateStr: string | Date | null | undefined): Date => {
+const parseISTDate = (dateStr: string | Date | null | undefined): Date => {
   if (!dateStr) return new Date();
   if (dateStr instanceof Date) return dateStr;
   let s = String(dateStr);

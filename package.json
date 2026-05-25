@@ -9,6 +9,8 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@capacitor/android": "^8.3.4",
+    "@capacitor/ios": "^8.3.4",
     "@types/three": "^0.183.1",
     "axios": "1.6.2",
     "date-fns": "3.0.0",
@@ -21,6 +23,8 @@
     "three": "^0.183.2"
   },
   "devDependencies": {
+    "@capacitor/cli": "^8.3.4",
+    "@capacitor/core": "^8.3.4",
     "@types/node": "20.10.5",
     "@types/react": "18.2.45",
     "@types/react-dom": "18.2.18",
