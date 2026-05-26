@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import VideoCallModal from '../../components/VideoCallModal';
 import { useParams } from 'next/navigation';
 import axios from 'axios';
 import { 
@@ -213,10 +214,9 @@ export default function TrackPage() {
   const autoOpenNewRef = useRef(true);
   const prevMaxTaskIdRef = useRef<number | null>(null);
 
-  // Video Call Integration States & Refs
-  const jitsiContainerRef = useRef<HTMLDivElement>(null);
-  const jitsiApiRef = useRef<any>(null);
+  // Video Call Integration
   const [showVideoCall, setShowVideoCall] = useState(false);
+  const [isVideoCaller, setIsVideoCaller] = useState(false);
 
   useEffect(() => {
     selectedTaskIdRef.current = selectedTaskId;
@@ -358,79 +358,9 @@ export default function TrackPage() {
     }
   }, [selectedTaskId, token]);
 
-  // Video Call Integration
-  useEffect(() => {
-    if (showVideoCall) {
-      if ((window as any).JitsiMeetExternalAPI) {
-        initJitsi();
-        return;
-      }
-
-      const script = document.createElement('script');
-      script.src = "https://meet.jit.si/external_api.js";
-      script.async = true;
-      script.onload = () => {
-        initJitsi();
-      };
-      document.body.appendChild(script);
-
-      return () => {
-        if (script.parentNode) {
-          script.parentNode.removeChild(script);
-        }
-      };
-    }
-  }, [showVideoCall]);
-
-  const initJitsi = () => {
-    if (!jitsiContainerRef.current || !(window as any).JitsiMeetExternalAPI) return;
-
-    if (jitsiApiRef.current) {
-      jitsiApiRef.current.destroy();
-      jitsiApiRef.current = null;
-    }
-
-    const domain = "meet.jit.si";
-    const roomName = `KairaFlow_Task_${selectedTaskId}_MeetingRoom`;
-    const options = {
-      roomName: roomName,
-      width: '100%',
-      height: '100%',
-      parentNode: jitsiContainerRef.current,
-      userInfo: {
-        displayName: client?.contact_person || 'Client'
-      },
-      configOverwrite: {
-        startWithAudioMuted: false,
-        startWithVideoMuted: false,
-        prejoinPageEnabled: false,
-        disableThirdPartyRequests: true,
-      },
-      interfaceConfigOverwrite: {
-        MOBILE_APP_PROMO: false,
-        SHOW_JITSI_WATERMARK: false,
-        DEEP_LINKING_IMAGE_URL: '',
-      }
-    };
-
-    const api = new (window as any).JitsiMeetExternalAPI(domain, options);
-    jitsiApiRef.current = api;
-
-    api.addEventListener('videoConferenceLeft', () => {
-      closeVideoCall();
-    });
-
-    api.addEventListener('readyToClose', () => {
-      closeVideoCall();
-    });
-  };
-
-  const closeVideoCall = () => {
-    if (jitsiApiRef.current) {
-      jitsiApiRef.current.destroy();
-      jitsiApiRef.current = null;
-    }
-    setShowVideoCall(false);
+  const startVideoCall = (asCaller: boolean) => {
+    setIsVideoCaller(asCaller);
+    setShowVideoCall(true);
   };
 
   const handleSendMessage = async (e?: React.FormEvent) => {
@@ -555,7 +485,7 @@ export default function TrackPage() {
         <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
           {selectedTaskId && (
             <button
-              onClick={() => setShowVideoCall(true)}
+              onClick={() => startVideoCall(false)}
               className="flex items-center gap-1.5 sm:gap-2 px-3 py-1.5 sm:px-4 sm:py-2 bg-[#8e44ad] hover:bg-[#732d91] text-white rounded-xl text-[10px] sm:text-xs font-black uppercase tracking-wider transition-all duration-200 active:scale-[0.98] shadow-md shadow-purple-500/10"
               title="Join Live Video Call"
             >
@@ -1117,7 +1047,7 @@ export default function TrackPage() {
                                     <p className="whitespace-pre-wrap">{msg.content}</p>
                                   )}
                                   <div className="text-[8px] mt-1 flex justify-end font-medium opacity-60">
-                                    {dateObj.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true }).toLowerCase()}
+                                    {dateObj.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true, timeZone: 'Asia/Kolkata' }).toLowerCase()}
                                   </div>
                                 </div>
                               </div>
@@ -1189,37 +1119,7 @@ export default function TrackPage() {
 
       </div>
 
-      {/* Jitsi Meeting Overlay */}
-      {showVideoCall && (
-        <div className="fixed inset-0 bg-black/90 backdrop-blur-md z-[9999] flex flex-col p-4 md:p-6 animate-fade-in">
-          {/* Header */}
-          <div className="flex items-center justify-between px-5 py-4 border-b border-white/10 bg-gray-900/50 backdrop-blur-sm rounded-t-2xl">
-            <div className="flex items-center gap-3">
-              <div className="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse"></div>
-              <div>
-                <h2 className="text-sm font-black uppercase tracking-wider text-white">
-                  🎥 Live Client Meeting
-                </h2>
-                <p className="text-[9px] text-gray-400 font-bold uppercase mt-0.5 tracking-wide">
-                  Task: {activeTask?.title}
-                </p>
-              </div>
-            </div>
-            
-            <button 
-              onClick={closeVideoCall} 
-              className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all duration-200 active:scale-[0.98] shadow-lg shadow-red-500/20"
-            >
-              End Call
-            </button>
-          </div>
 
-          {/* Jitsi Meeting Frame */}
-          <div className="flex-1 bg-black rounded-b-2xl overflow-hidden relative border border-white/10 shadow-2xl mt-1">
-            <div ref={jitsiContainerRef} className="w-full h-full" />
-          </div>
-        </div>
-      )}
 
       {/* Premium Toast for New Task Alert */}
       {newTaskAlert && (
@@ -1246,6 +1146,15 @@ export default function TrackPage() {
             <FiX size={16} />
           </button>
         </div>
+      )}
+      {/* Internal WebRTC Video Call Modal */}
+      {showVideoCall && (
+        <VideoCallModal
+          roomId={`KairaFlow_Task_${selectedTaskId}`}
+          userName={client?.contact_person || 'Client'}
+          isCaller={isVideoCaller}
+          onClose={() => setShowVideoCall(false)}
+        />
       )}
 
     </div>

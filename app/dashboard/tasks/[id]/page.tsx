@@ -1,6 +1,9 @@
 'use client';
 
 import React, { useEffect, useState, useRef } from 'react';
+import VideoCallModal from '../../../components/VideoCallModal';
+
+
 import { useParams, useRouter } from 'next/navigation';
 import { taskAPI, orgAPI, rewardsAPI, messageAPI, API_URL } from '../../../utils/api';
 import { useAuth } from '../../../utils/AuthContext';
@@ -119,10 +122,10 @@ export default function TaskDetailPage() {
 
   const [copied, setCopied] = useState(false);
 
-  // Video Call Integration States & Refs
-  const jitsiContainerRef = useRef<HTMLDivElement>(null);
-  const jitsiApiRef = useRef<any>(null);
+  // Video Call Integration
   const [showVideoCall, setShowVideoCall] = useState(false);
+  const [isVideoCaller, setIsVideoCaller] = useState(false);
+
 
   // Pipeline State Variables
   const [pipelineStages, setPipelineStages] = useState<any[]>([]);
@@ -181,80 +184,12 @@ export default function TaskDetailPage() {
     }
   }, [showPipeline, pipelineStages]);
 
-  // Video Call Integration
-  useEffect(() => {
-    if (showVideoCall) {
-      if ((window as any).JitsiMeetExternalAPI) {
-        initJitsi();
-        return;
-      }
-
-      const script = document.createElement('script');
-      script.src = "https://meet.jit.si/external_api.js";
-      script.async = true;
-      script.onload = () => {
-        initJitsi();
-      };
-      document.body.appendChild(script);
-
-      return () => {
-        if (script.parentNode) {
-          script.parentNode.removeChild(script);
-        }
-      };
-    }
-  }, [showVideoCall]);
-
-  const initJitsi = () => {
-    if (!jitsiContainerRef.current || !(window as any).JitsiMeetExternalAPI) return;
-
-    if (jitsiApiRef.current) {
-      jitsiApiRef.current.destroy();
-      jitsiApiRef.current = null;
-    }
-
-    const domain = "meet.jit.si";
-    const roomName = `KairaFlow_Task_${id}_MeetingRoom`;
-    const options = {
-      roomName: roomName,
-      width: '100%',
-      height: '100%',
-      parentNode: jitsiContainerRef.current,
-      userInfo: {
-        displayName: user?.name || 'Team Member'
-      },
-      configOverwrite: {
-        startWithAudioMuted: false,
-        startWithVideoMuted: false,
-        prejoinPageEnabled: false,
-        disableThirdPartyRequests: true,
-      },
-      interfaceConfigOverwrite: {
-        MOBILE_APP_PROMO: false,
-        SHOW_JITSI_WATERMARK: false,
-        DEEP_LINKING_IMAGE_URL: '',
-      }
-    };
-
-    const api = new (window as any).JitsiMeetExternalAPI(domain, options);
-    jitsiApiRef.current = api;
-
-    api.addEventListener('videoConferenceLeft', () => {
-      closeVideoCall();
-    });
-
-    api.addEventListener('readyToClose', () => {
-      closeVideoCall();
-    });
+  const startVideoCall = (asCaller: boolean) => {
+    setIsVideoCaller(asCaller);
+    setShowVideoCall(true);
   };
 
-  const closeVideoCall = () => {
-    if (jitsiApiRef.current) {
-      jitsiApiRef.current.destroy();
-      jitsiApiRef.current = null;
-    }
-    setShowVideoCall(false);
-  };
+
 
   const loadTask = async () => {
     try {
@@ -941,7 +876,7 @@ export default function TaskDetailPage() {
                 {activePanel === 'chat' && (
                   <div className="flex items-center gap-2">
                       <button 
-                        onClick={() => setShowVideoCall(true)}
+                        onClick={() => startVideoCall(true)}
                         className="flex items-center gap-2 px-4 py-2 bg-[#8e44ad] hover:bg-[#732d91] text-white rounded-lg text-xs font-bold shadow-md transition-all"
                       >
                          <FiVideo size={14} /> <span>Video call</span>
@@ -1000,7 +935,7 @@ export default function TaskDetailPage() {
                                            {msg.content}
                                         </p>
                                         <span className="text-[9px] text-gray-600 dark:text-gray-400 font-medium whitespace-nowrap ml-3">
-                                           {dateObj.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true }).toLowerCase()}
+                                           {dateObj.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true, timeZone: 'Asia/Kolkata' }).toLowerCase()}
                                         </span>
                                      </div>
                                   </div>
@@ -1071,7 +1006,7 @@ export default function TaskDetailPage() {
                                               {(msg.is_edited === 1 || msg.is_edited === true) && (
                                                 <span className="text-[8px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider">(edited)</span>
                                               )}
-                                              <span>{dateObj.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true }).toLowerCase()}</span>
+                                              <span>{dateObj.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true, timeZone: 'Asia/Kolkata' }).toLowerCase()}</span>
                                               {isMe && <span>✓✓</span>}
                                            </div>
                                        </div>
@@ -1526,37 +1461,16 @@ export default function TaskDetailPage() {
           </div>
         </div>
       )}
-        {/* Jitsi Meeting Overlay */}
-        {showVideoCall && (
-          <div className="fixed inset-0 bg-black/90 backdrop-blur-md z-[9999] flex flex-col p-4 md:p-6 animate-fade-in">
-            {/* Header */}
-            <div className="flex items-center justify-between px-5 py-4 border-b border-white/10 bg-gray-900/50 backdrop-blur-sm rounded-t-2xl">
-              <div className="flex items-center gap-3">
-                <div className="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse"></div>
-                <div>
-                  <h2 className="text-sm font-black uppercase tracking-wider text-white">
-                    🎥 Live Meeting
-                  </h2>
-                  <p className="text-[9px] text-gray-400 font-bold uppercase mt-0.5 tracking-wide">
-                    Task: {task?.title}
-                  </p>
-                </div>
-              </div>
-              
-              <button 
-                onClick={closeVideoCall} 
-                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all duration-200 active:scale-[0.98] shadow-lg shadow-red-500/20"
-              >
-                End Call
-              </button>
-            </div>
+        {/* Internal WebRTC Video Call Modal */}
+      {showVideoCall && (
+        <VideoCallModal
+          roomId={`KairaFlow_Task_${id}`}
+          userName={user?.name || 'Team Member'}
+          isCaller={isVideoCaller}
+          onClose={() => setShowVideoCall(false)}
+        />
+      )}
 
-            {/* Jitsi Meeting Frame */}
-            <div className="flex-1 bg-black rounded-b-2xl overflow-hidden relative border border-white/10 shadow-2xl mt-1">
-              <div ref={jitsiContainerRef} className="w-full h-full" />
-            </div>
-          </div>
-        )}
      </div>
    );
 }
