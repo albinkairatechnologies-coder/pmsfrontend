@@ -18,11 +18,11 @@ export default function ProfilePage() {
   const [uploadingImg, setUploadingImg] = useState(false);
   const [imgError, setImgError] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [apkUrl, setApkUrl] = useState('https://kairavcard.com/uploads/apps/kairaflow.apk');
+  const [apkUrl, setApkUrl] = useState('https://kairavcard.com/pms/uploads/apps/kairaflow.apk');
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      setApkUrl(`${window.location.origin}/uploads/apps/kairaflow.apk`);
+      setApkUrl(`${window.location.origin}/pms/uploads/apps/kairaflow.apk`);
     }
   }, []);
 
