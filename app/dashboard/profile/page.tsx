@@ -391,7 +391,8 @@ export default function ProfilePage() {
             <h3 className="text-base font-bold mb-5 flex items-center gap-2 dark:text-white">
               <FiAward className="text-amber-500" /> Recent Appreciations
             </h3>
-            <div className="overflow-x-auto">
+            {/* Desktop Table View */}
+            <div className="hidden md:block overflow-x-auto">
               <table className="w-full text-left">
                 <thead>
                   <tr className="border-b border-gray-100 dark:border-white/5 text-[10px] font-black uppercase text-gray-400 tracking-widest">
@@ -417,6 +418,22 @@ export default function ProfilePage() {
                   )}
                 </tbody>
               </table>
+            </div>
+
+            {/* Mobile Cards View */}
+            <div className="md:hidden space-y-3">
+              {rewards.history.map((row: any, i: number) => (
+                <div key={i} className="p-3.5 bg-gray-50/50 dark:bg-white/[0.02] border border-gray-100 dark:border-white/5 rounded-2xl flex items-center justify-between text-xs">
+                  <div>
+                    <h4 className="font-bold text-gray-800 dark:text-gray-200">{row.reason}</h4>
+                    <p className="text-[10px] text-gray-400 font-bold mt-0.5">{new Date(row.created_at).toLocaleDateString()}</p>
+                  </div>
+                  <span className="px-2.5 py-1 bg-amber-500/10 text-amber-600 dark:text-amber-400 rounded-lg text-[10px] font-black">+{row.amount}</span>
+                </div>
+              ))}
+              {rewards.history.length === 0 && (
+                <p className="text-center text-xs text-gray-400 italic py-6">No achievement coins yet. Start completing tasks on time!</p>
+              )}
             </div>
           </div>
         </div>
