@@ -6,6 +6,8 @@ import { FiBell, FiX } from 'react-icons/fi';
 import { notificationAPI, domainAPI } from '../utils/api';
 import { useAuth } from '../utils/AuthContext';
 import { motion, AnimatePresence } from 'framer-motion';
+import { LocalNotifications } from '@capacitor/local-notifications';
+import { Capacitor } from '@capacitor/core';
 
 const TYPE_COLORS: Record<string, string> = {
   leave_approved:      'text-emerald-400',
@@ -49,19 +51,58 @@ export default function NotificationBell() {
   };
 
   useEffect(() => {
-    if (typeof window !== 'undefined' && 'Notification' in window) {
-      if (Notification.permission === 'granted') {
-        setHasPermission(true);
-      } else if (Notification.permission !== 'denied') {
-        Notification.requestPermission().then(permission => {
-          setHasPermission(permission === 'granted');
-        });
+    const requestNotificationPermissions = async () => {
+      // 1. Request for Mobile App (Capacitor)
+      if (Capacitor.isNativePlatform()) {
+        try {
+          const perm = await LocalNotifications.checkPermissions();
+          if (perm.display !== 'granted') {
+            const req = await LocalNotifications.requestPermissions();
+            setHasPermission(req.display === 'granted');
+          } else {
+            setHasPermission(true);
+          }
+        } catch (err) {
+          console.error('Capacitor check/request permissions failed:', err);
+        }
+      } 
+      // 2. Request for Desktop/Mobile Web Browser
+      else if (typeof window !== 'undefined' && 'Notification' in window) {
+        if (Notification.permission === 'granted') {
+          setHasPermission(true);
+        } else if (Notification.permission !== 'denied') {
+          Notification.requestPermission().then(permission => {
+            setHasPermission(permission === 'granted');
+          });
+        }
       }
-    }
+    };
+
+    requestNotificationPermissions();
   }, []);
 
-  const triggerDesktopNotification = (title: string, body: string, link?: string) => {
-    if (hasPermission) {
+  const triggerDesktopNotification = async (title: string, body: string, link?: string) => {
+    // 1. Mobile Native App via Capacitor
+    if (Capacitor.isNativePlatform()) {
+      try {
+        await LocalNotifications.schedule({
+          notifications: [
+            {
+              title: title,
+              body: body,
+              id: Math.floor(Math.random() * 1000000), // Random unique ID
+              schedule: { at: new Date(Date.now() + 100) }, // Trigger immediately
+              sound: 'default',
+              extra: { link: link }
+            }
+          ]
+        });
+      } catch (err) {
+        console.error('Capacitor local notification schedule failed:', err);
+      }
+    }
+    // 2. Standard Web Browser
+    else if (hasPermission) {
       const notification = new Notification(title, {
         body,
         icon: typeof window !== 'undefined' && window.location.pathname.startsWith('/pms') ? '/pms/favicon.ico' : '/favicon.ico',
