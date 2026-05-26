@@ -511,7 +511,7 @@ export default function TaskDetailPage() {
   if (!task) return <div className="flex h-full items-center justify-center animate-pulse text-indigo-500 font-bold text-xs">Loading...</div>;
 
   return (
-    <div className="flex flex-col lg:flex-row h-[calc(100vh-64px)] -mt-10 -mx-6 overflow-hidden bg-[#F8FAFC] dark:bg-[#08090D] relative font-sans">
+    <div className="flex flex-col lg:flex-row h-[calc(100vh-64px)] lg:-mt-10 lg:-mx-6 overflow-hidden bg-[#F8FAFC] dark:bg-[#08090D] relative font-sans">
       
       {/* Mobile Tab Switcher */}
       <div className="lg:hidden flex bg-[#ffffff] dark:bg-[#0B0E14] border-b border-gray-200 dark:border-white/5 z-50 flex-shrink-0">
@@ -896,7 +896,10 @@ export default function TaskDetailPage() {
                   { key: 'history',  icon: <FiClock size={14}/>,       label: 'Activity',      color: 'text-orange-600 bg-orange-50 dark:bg-orange-500/10' },
                   { key: 'alerts',   icon: <FiBell size={14}/>,        label: 'Alerts',        color: 'text-red-600 bg-red-50 dark:bg-red-500/10' },
                 ] as const).map(tab => (
-                    <button key={tab.key} onClick={() => setActivePanel(p => p === tab.key ? 'chat' : tab.key)}
+                    <button key={tab.key} onClick={() => {
+                      setActivePanel(p => p === tab.key ? 'chat' : tab.key);
+                      setMobileActiveTab('chat');
+                    }}
                       className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-[12px] font-bold transition-all border ${
                         activePanel === tab.key
                           ? 'bg-indigo-600 text-white border-indigo-600 shadow-lg shadow-indigo-500/20 ring-2 ring-indigo-600 ring-opacity-20'
