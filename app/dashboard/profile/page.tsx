@@ -10,19 +10,25 @@ import {
 
 export default function ProfilePage() {
   const { user, refreshUser } = useAuth();
-  const [loading, setLoading]     = useState(false);
-  const [saved, setSaved]         = useState('');
-  const [error, setError]         = useState('');
-  const [rewards, setRewards]     = useState<any>({ total_coins: 0, history: [] });
+  const [loading, setLoading] = useState(false);
+  const [saved, setSaved] = useState('');
+  const [error, setError] = useState('');
+  const [rewards, setRewards] = useState<any>({ total_coins: 0, history: [] });
   const [imgPreview, setImgPreview] = useState<string>('');
   const [uploadingImg, setUploadingImg] = useState(false);
   const [imgError, setImgError] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [apkUrl, setApkUrl] = useState('https://kairavcard.com/pms/uploads/apps/kairaflow.apk');
+  const [apkUrl, setApkUrl] = useState('https://kairavcard.com/pms/api/public/apps/kairaflow.apk');
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      setApkUrl(`${window.location.origin}/pms/uploads/apps/kairaflow.apk`);
+      const hostname = window.location.hostname;
+      const isLocal = hostname === 'localhost' || hostname === '127.0.0.1' || hostname.startsWith('192.168.') || hostname.startsWith('10.') || hostname.endsWith('.local');
+      if (isLocal) {
+        setApkUrl('http://localhost:5000/api/public/apps/kairaflow.apk');
+      } else {
+        setApkUrl(`${window.location.origin}/pms/api/public/apps/kairaflow.apk`);
+      }
     }
   }, []);
 
@@ -38,12 +44,12 @@ export default function ProfilePage() {
   useEffect(() => {
     if (!user) return;
     setProfileForm({
-      name:                    user.name || '',
-      phone:                   user.phone || '',
-      bio:                     user.bio || '',
-      dob:                     user.dob ? user.dob.split('T')[0] : '',
-      address:                 user.address || '',
-      emergency_contact_name:  user.emergency_contact_name || '',
+      name: user.name || '',
+      phone: user.phone || '',
+      bio: user.bio || '',
+      dob: user.dob ? user.dob.split('T')[0] : '',
+      address: user.address || '',
+      emergency_contact_name: user.emergency_contact_name || '',
       emergency_contact_phone: user.emergency_contact_phone || '',
     });
     if (user.profile_image) {
@@ -54,7 +60,7 @@ export default function ProfilePage() {
       );
       setImgError(false);
     }
-    rewardsAPI.getStats().then(r => setRewards(r.data)).catch(() => {});
+    rewardsAPI.getStats().then(r => setRewards(r.data)).catch(() => { });
   }, [user]);
 
   const showSaved = (msg: string) => {
@@ -107,7 +113,7 @@ export default function ProfilePage() {
     try {
       await authAPI.changePassword({
         current_password: passwordForm.current_password,
-        new_password:     passwordForm.new_password,
+        new_password: passwordForm.new_password,
       });
       setPasswordForm({ current_password: '', new_password: '', confirm_password: '' });
       showSaved('Password changed successfully!');
@@ -153,11 +159,11 @@ export default function ProfilePage() {
             <div className="relative mb-4">
               <div className="w-24 h-24 rounded-3xl overflow-hidden bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg">
                 {imgPreview && !imgError ? (
-                  <img 
-                    src={imgPreview} 
-                    alt="profile" 
-                    className="w-full h-full object-cover" 
-                    crossOrigin="anonymous" 
+                  <img
+                    src={imgPreview}
+                    alt="profile"
+                    className="w-full h-full object-cover"
+                    crossOrigin="anonymous"
                     onLoad={() => console.log('Profile image loaded successfully:', imgPreview)}
                     onError={(e) => {
                       console.error('Profile image load failed:', imgPreview, e);
@@ -251,25 +257,25 @@ export default function ProfilePage() {
             {/* Subtle blue/purple glow in background */}
             <div className="absolute -top-12 -left-12 w-28 h-28 bg-indigo-500/10 rounded-full blur-2xl group-hover:bg-indigo-500/20 transition-all"></div>
             <div className="absolute -bottom-12 -right-12 w-28 h-28 bg-purple-500/10 rounded-full blur-2xl group-hover:bg-purple-500/20 transition-all"></div>
-            
+
             <div className="relative z-10 w-full flex flex-col items-center">
               <span className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-400">Mobile Companion</span>
               <h3 className="text-sm font-black uppercase tracking-tight text-white mt-1">Get the Android App</h3>
               <p className="text-[11px] text-gray-400 leading-relaxed mt-2 px-1">
                 Scan the QR code below or click the button to download the native **KairaFlow APK** directly onto your phone!
               </p>
-              
+
               {/* QR Code Container */}
               <div className="my-5 p-3 bg-white rounded-2xl shadow-xl border border-white/10 hover:scale-[1.03] transition-transform duration-300">
-                <img 
-                  src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(apkUrl)}`} 
-                  alt="QR Code to Download Mobile App" 
+                <img
+                  src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(apkUrl)}`}
+                  alt="QR Code to Download Mobile App"
                   className="w-36 h-36 object-contain"
                 />
               </div>
 
               {/* Direct Download Button */}
-              <a 
+              <a
                 href={apkUrl}
                 download="kairaflow.apk"
                 className="w-full py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all duration-200 active:scale-[0.98] shadow-md shadow-indigo-500/25 flex items-center justify-center gap-2 border border-white/10"
