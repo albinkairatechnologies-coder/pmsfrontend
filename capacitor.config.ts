@@ -5,7 +5,7 @@ const config: CapacitorConfig = {
   appName: 'KairaFlow',
   webDir: 'out',
   server: {
-    url: 'https://kairavcard.com',
+    url: 'https://kairavcard.com/pms',
     cleartext: true
   }
 };
