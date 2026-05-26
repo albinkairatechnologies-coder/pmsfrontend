@@ -157,7 +157,7 @@ export default function DashboardPage() {
   const loadDashboardData = async () => {
     if (!user) return;
     try {
-      if (user.role === 'admin' || user.role === 'marketing_head') {
+      if (user.role === 'admin' || user.role === 'marketing_head' || user.role === 'bdm_head') {
         const [d, s] = await Promise.all([
           dashboardAPI.getAdminDashboard().catch(() => ({ data: null })),
           salaryAPI.getStats().catch(() => ({ data: null }))
@@ -165,7 +165,7 @@ export default function DashboardPage() {
         if (d?.data) setStats(d.data);
         if (s?.data) setSalaryStats(s.data);
       }
-      else if (user.role === 'team_lead' || user.role === 'crm_head' || user.role === 'bdm' || user.role === 'bdm_head') {
+      else if (user.role === 'team_lead' || user.role === 'crm_head' || user.role === 'bdm') {
         const res = await dashboardAPI.getLeadDashboard().catch(() => null);
         if (res?.data) setStats(res.data);
       }
@@ -313,8 +313,8 @@ export default function DashboardPage() {
     </div>
   );
 
-  /* ── Admin / Marketing Head ── */
-  if (user?.role === 'admin' || user?.role === 'marketing_head') return (
+  /* ── Admin / Marketing Head / BDM Head ── */
+  if (user?.role === 'admin' || user?.role === 'marketing_head' || user?.role === 'bdm_head') return (
     <div className="p-6 space-y-6">
       {showImage && (
         <div 
@@ -493,7 +493,7 @@ export default function DashboardPage() {
   );
 
   /* ── Team Lead / CRM / BDM ── */
-  if (user?.role === 'team_lead' || user?.role === 'crm_head' || user?.role === 'bdm' || user?.role === 'bdm_head') return (
+  if (user?.role === 'team_lead' || user?.role === 'crm_head' || user?.role === 'bdm') return (
     <div className="p-6 space-y-6">
       {showImage && (
         <div 

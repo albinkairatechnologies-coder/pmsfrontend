@@ -5,7 +5,7 @@ import { leaveAPI } from '../../utils/api';
 import { useAuth } from '../../utils/AuthContext';
 import { FiPlus, FiCheck, FiX, FiCalendar, FiClock, FiUsers, FiAlertCircle, FiTrash2 } from 'react-icons/fi';
 
-const LEAD_ROLES = ['admin', 'team_lead', 'marketing_head', 'crm_head'];
+const LEAD_ROLES = ['admin', 'team_lead', 'marketing_head', 'crm_head', 'bdm', 'bdm_head'];
 
 const LEAVE_TYPES = ['sick', 'casual', 'emergency', 'annual'];
 

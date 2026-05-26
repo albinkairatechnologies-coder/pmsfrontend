@@ -8,7 +8,7 @@ import {
   FiAlertCircle, FiCheckCircle, FiCalendar, FiRefreshCw, FiX,
 } from 'react-icons/fi';
 
-const LEAD_ROLES = ['admin', 'team_lead', 'marketing_head', 'crm_head'];
+const LEAD_ROLES = ['admin', 'team_lead', 'marketing_head', 'crm_head', 'bdm', 'bdm_head'];
 
 const STATUS_STYLES: Record<string, string> = {
   present:  'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',

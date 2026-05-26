@@ -5,7 +5,7 @@ import { feedbackAPI, reviewAPI, authAPI } from '../../utils/api';
 import { useAuth } from '../../utils/AuthContext';
 import { FiMessageSquare, FiStar, FiCalendar, FiUsers, FiTrendingUp, FiEye, FiEyeOff } from 'react-icons/fi';
 
-const LEAD_ROLES = ['admin', 'team_lead', 'marketing_head', 'crm_head'];
+const LEAD_ROLES = ['admin', 'team_lead', 'marketing_head', 'crm_head', 'bdm', 'bdm_head'];
 
 const CATEGORIES = [
   { value: 'work_environment', label: 'Work Environment' },

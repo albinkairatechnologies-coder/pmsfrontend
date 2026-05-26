@@ -5,7 +5,7 @@ import { permissionAPI } from '../../utils/api';
 import { useAuth } from '../../utils/AuthContext';
 import { FiPlus, FiCheck, FiX, FiClock, FiUsers, FiAlertCircle } from 'react-icons/fi';
 
-const LEAD_ROLES = ['admin', 'team_lead', 'marketing_head', 'crm_head'];
+const LEAD_ROLES = ['admin', 'team_lead', 'marketing_head', 'crm_head', 'bdm', 'bdm_head'];
 
 const STATUS_STYLES: Record<string, string> = {
   pending:  'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400',

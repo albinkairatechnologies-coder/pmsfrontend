@@ -68,7 +68,7 @@ export default function TasksPage() {
     client_id: '', priority: 'medium', due_date: '',
   });
 
-  const isLeadOrAdmin = ['admin', 'team_lead', 'marketing_head', 'crm_head'].includes(user?.role || '');
+  const isLeadOrAdmin = ['admin', 'team_lead', 'marketing_head', 'crm_head', 'bdm', 'bdm_head'].includes(user?.role || '');
   const today = new Date().toISOString().split('T')[0];
 
   useEffect(() => {
