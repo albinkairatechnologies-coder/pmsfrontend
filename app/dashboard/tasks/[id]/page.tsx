@@ -242,6 +242,10 @@ export default function TaskDetailPage() {
     api.addEventListener('videoConferenceLeft', () => {
       closeVideoCall();
     });
+
+    api.addEventListener('readyToClose', () => {
+      closeVideoCall();
+    });
   };
 
   const closeVideoCall = () => {
@@ -1540,11 +1544,7 @@ export default function TaskDetailPage() {
               </div>
               
               <button 
-                onClick={() => {
-                  if (confirm("Are you sure you want to end this call?")) {
-                    closeVideoCall();
-                  }
-                }} 
+                onClick={closeVideoCall} 
                 className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all duration-200 active:scale-[0.98] shadow-lg shadow-red-500/20"
               >
                 End Call
