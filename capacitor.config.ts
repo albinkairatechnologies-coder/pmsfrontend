@@ -3,7 +3,12 @@ import type { CapacitorConfig } from '@capacitor/cli';
 const config: CapacitorConfig = {
   appId: 'com.kairavcard.pms',
   appName: 'KairaFlow',
-  webDir: 'out'
+  webDir: 'out',
+  server: {
+    url: 'https://kairavcard.com',
+    cleartext: true
+  }
 };
 
 export default config;
+

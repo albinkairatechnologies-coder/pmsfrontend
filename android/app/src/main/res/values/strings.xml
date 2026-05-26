@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">KairaFlow</string>
+    <string name="title_activity_main">KairaFlow</string>
+    <string name="package_name">com.kairavcard.pms</string>
+    <string name="custom_url_scheme">com.kairavcard.pms</string>
+</resources>

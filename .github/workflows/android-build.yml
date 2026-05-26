@@ -30,14 +30,12 @@ jobs:
       - name: Install NPM Dependencies
         run: npm ci
 
-      - name: Compile Next.js Static Assets
-        # This will export the web assets into the 'out' directory for Capacitor
-        run: npm run build
-        env:
-          BUILD_MOBILE: 'true'
-          NEXT_PUBLIC_API_URL: 'https://kairavcard.com/api'
+      - name: Create Dummy Web Directory
+        # Capacitor sync needs the 'out' directory to exist. Since the app wraps the live website URL dynamically,
+        # we don't need to build local static HTML files! This makes the build lightning fast!
+        run: mkdir -p out
 
-      - name: Sync Web Assets to Android Project
+      - name: Sync Assets to Android Project
         run: npx cap sync
 
       - name: Build Android Debug APK
