@@ -47,12 +47,15 @@ export default function DashboardLayout({
               </div>
               <h1 className="text-2xl md:text-3xl font-black text-gray-900 dark:text-white tracking-tight">KairaFlow</h1>
            </div>
-           <button onClick={() => setSidebarOpen(true)} className="p-2 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5 rounded-xl transition-all">
-              <FiMenu size={24} />
-           </button>
+           <div className="flex items-center gap-2">
+              <NotificationBell />
+              <button onClick={() => setSidebarOpen(true)} className="p-2 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5 rounded-xl transition-all">
+                 <FiMenu size={24} />
+              </button>
+           </div>
         </div>
 
-        <div className="flex justify-end px-6 pt-4 no-print">
+        <div className="hidden lg:flex justify-end px-6 pt-4 no-print">
           <NotificationBell />
         </div>
         <div className="px-4 md:px-6 pb-8">

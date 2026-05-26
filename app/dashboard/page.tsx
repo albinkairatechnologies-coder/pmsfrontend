@@ -384,7 +384,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Big stat cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-6 gap-4">
         <LuxuryStatCard {...STAT_CONFIGS[0]} value={stats?.total_teams          || 0} />
         <LuxuryStatCard {...STAT_CONFIGS[1]} value={stats?.total_employees      || 0} />
         <LuxuryStatCard {...STAT_CONFIGS[2]} value={stats?.task_stats?.completed || 0} />
@@ -394,7 +394,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Mini stat cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-4">
         {[
           { label: 'Total Tasks',   val: stats?.task_stats?.total_tasks || 0, color: 'text-primary-600 dark:text-primary-400'  },
           { label: 'In Progress',   val: stats?.task_stats?.in_progress || 0, color: 'text-yellow-600 dark:text-yellow-400'    },
@@ -462,7 +462,9 @@ export default function DashboardPage() {
       {/* Employee table */}
       <GlowCard className="p-6">
         <CardTitle>Employee Productivity</CardTitle>
-        <div className="overflow-x-auto">
+        
+        {/* Desktop View */}
+        <div className="hidden md:block overflow-x-auto">
           <table className="table-base w-full">
             <thead><tr>
               {['Name','Role','Team','Department','Assigned','Completed','Overdue'].map(h => (
@@ -487,6 +489,39 @@ export default function DashboardPage() {
               ))}
             </tbody>
           </table>
+        </div>
+
+        {/* Mobile View */}
+        <div className="md:hidden space-y-4">
+          {stats?.employee_productivity?.map((emp: any, i: number) => (
+            <div key={i} className="p-4 bg-gray-50/50 dark:bg-white/[0.02] border border-gray-100 dark:border-white/5 rounded-2xl space-y-3">
+              <div className="flex justify-between items-start">
+                <div>
+                  <h4 className="font-bold text-gray-900 dark:text-white text-sm">{emp.name}</h4>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 capitalize">{emp.role?.replace(/_/g, ' ')}</p>
+                </div>
+                <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${
+                  emp.overdue > 0 ? 'bg-red-500/10 text-red-500' : 'bg-gray-500/10 text-gray-400'
+                }`}>
+                  {emp.overdue} Overdue
+                </span>
+              </div>
+              <div className="grid grid-cols-2 gap-2 pt-2 border-t border-gray-100 dark:border-white/5 text-[11px]">
+                <div>
+                  <span className="text-gray-400">Team:</span> <span className="font-semibold text-gray-700 dark:text-gray-300">{emp.team_name || '—'}</span>
+                </div>
+                <div>
+                  <span className="text-gray-400">Department:</span> <span className="font-semibold text-gray-700 dark:text-gray-300">{emp.dept_name || '—'}</span>
+                </div>
+                <div>
+                  <span className="text-gray-400">Assigned:</span> <span className="font-bold text-primary-500">{emp.assigned_tasks}</span>
+                </div>
+                <div>
+                  <span className="text-gray-400">Completed:</span> <span className="font-bold text-emerald-500">{emp.completed_tasks}</span>
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
       </GlowCard>
     </div>

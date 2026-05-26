@@ -61,6 +61,7 @@ export default function TasksPage() {
   const [search, setSearch] = useState('');
   const [view, setView] = useState<'kanban' | 'list'>('kanban');
   const [loading, setLoading] = useState(true);
+  const [activeKanbanTab, setActiveKanbanTab] = useState('pending');
 
   const [formData, setFormData] = useState({
     title: '', description: '', department: 'general',
@@ -218,15 +219,34 @@ export default function TasksPage() {
 
       <AnimatePresence mode="wait">
         {view === 'kanban' ? (
-          <motion.div 
-            key="kanban"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 px-1"
-          >
-            {statuses.map((status) => (
-              <div key={status} className="flex flex-col gap-4">
+          <>
+            {/* Mobile Kanban Column Switcher */}
+            <div className="md:hidden flex p-1 bg-white/50 dark:bg-white/5 backdrop-blur-md rounded-2xl border border-gray-100 dark:border-white/5 mb-4 gap-1 overflow-x-auto custom-scrollbar">
+              {statuses.map(s => (
+                <button
+                  key={s}
+                  type="button"
+                  onClick={() => setActiveKanbanTab(s)}
+                  className={`flex-1 py-2 px-3 rounded-xl text-[9px] font-black uppercase tracking-wider transition-all whitespace-nowrap ${
+                    activeKanbanTab === s
+                      ? 'bg-white dark:bg-white/10 text-primary-600 dark:text-gold-500 shadow-sm'
+                      : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'
+                  }`}
+                >
+                  {s.replace('_', ' ')} ({tasks.filter(t => t.status === s).length})
+                </button>
+              ))}
+            </div>
+
+            <motion.div 
+              key="kanban"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 px-1"
+            >
+              {statuses.map((status) => (
+                <div key={status} className={`flex flex-col gap-4 ${activeKanbanTab === status ? 'flex' : 'hidden md:flex'}`}>
                 <div className="flex items-center justify-between px-2 mb-1">
                    <div className="flex items-center gap-3">
                       <div className={`w-2 h-2 rounded-full ${statusColors[status]} shadow-[0_0_8px_rgba(0,0,0,0.1)]`} />
@@ -273,6 +293,7 @@ export default function TasksPage() {
               </div>
             ))}
           </motion.div>
+        </>
         ) : (
           <motion.div 
             key="list"

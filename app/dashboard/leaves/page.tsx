@@ -235,41 +235,74 @@ export default function LeavesPage() {
 
   // ── My History Tab ───────────────────────────────────────────
   const MyView = () => (
-    <div className="card overflow-hidden p-0">
-      <table className="w-full text-sm">
-        <thead className="bg-gray-50 dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700">
-          <tr>
-            {['Type', 'From', 'To', 'Days', 'Reason', 'Status', 'Approved By'].map(h => (
-              <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">{h}</th>
+    <>
+      {/* Desktop Table View */}
+      <div className="hidden md:block card overflow-hidden p-0">
+        <table className="w-full text-sm">
+          <thead className="bg-gray-50 dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700">
+            <tr>
+              {['Type', 'From', 'To', 'Days', 'Reason', 'Status', 'Approved By'].map(h => (
+                <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">{h}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {myLeaves.length === 0 && (
+              <tr><td colSpan={7} className="px-4 py-10 text-center text-gray-400">No leave requests found</td></tr>
+            )}
+            {myLeaves.map((l: any) => (
+              <tr key={l.id} className="border-b border-gray-50 dark:border-gray-800 hover:bg-gray-50/70 dark:hover:bg-gray-800/50">
+                <td className="px-4 py-3">
+                  <span className={`text-xs font-semibold px-2.5 py-1 rounded-full capitalize ${TYPE_STYLES[l.leave_type]}`}>
+                    {l.leave_type}
+                  </span>
+                </td>
+                <td className="px-4 py-3 font-medium">{l.start_date}</td>
+                <td className="px-4 py-3">{l.end_date}</td>
+                <td className="px-4 py-3 text-center font-semibold">{l.total_days}</td>
+                <td className="px-4 py-3 max-w-xs truncate text-gray-500">{l.reason}</td>
+                <td className="px-4 py-3">
+                  <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${STATUS_STYLES[l.status]}`}>
+                    {l.status.toUpperCase()}
+                  </span>
+                </td>
+                <td className="px-4 py-3 text-gray-500 text-sm">{l.approved_by_name || '—'}</td>
+              </tr>
             ))}
-          </tr>
-        </thead>
-        <tbody>
-          {myLeaves.length === 0 && (
-            <tr><td colSpan={7} className="px-4 py-10 text-center text-gray-400">No leave requests found</td></tr>
-          )}
-          {myLeaves.map((l: any) => (
-            <tr key={l.id} className="border-b border-gray-50 dark:border-gray-800 hover:bg-gray-50/70 dark:hover:bg-gray-800/50">
-              <td className="px-4 py-3">
-                <span className={`text-xs font-semibold px-2.5 py-1 rounded-full capitalize ${TYPE_STYLES[l.leave_type]}`}>
-                  {l.leave_type}
-                </span>
-              </td>
-              <td className="px-4 py-3 font-medium">{l.start_date}</td>
-              <td className="px-4 py-3">{l.end_date}</td>
-              <td className="px-4 py-3 text-center font-semibold">{l.total_days}</td>
-              <td className="px-4 py-3 max-w-xs truncate text-gray-500">{l.reason}</td>
-              <td className="px-4 py-3">
-                <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${STATUS_STYLES[l.status]}`}>
+          </tbody>
+        </table>
+      </div>
+
+      {/* Mobile Card List View */}
+      <div className="md:hidden space-y-4">
+        {myLeaves.length === 0 ? (
+          <div className="card text-center text-gray-400 py-10">No leave requests found</div>
+        ) : (
+          myLeaves.map((l: any) => (
+            <div key={l.id} className="card p-4 space-y-3">
+              <div className="flex justify-between items-start">
+                <div className="flex items-center gap-2">
+                  <span className={`text-xs font-semibold px-2.5 py-1 rounded-full capitalize ${TYPE_STYLES[l.leave_type]}`}>
+                    {l.leave_type}
+                  </span>
+                  <span className="text-xs text-gray-400 font-bold">{l.total_days} day{l.total_days !== 1 ? 's' : ''}</span>
+                </div>
+                <span className={`text-[10px] font-black px-2.5 py-1 rounded-full ${STATUS_STYLES[l.status]}`}>
                   {l.status.toUpperCase()}
                 </span>
-              </td>
-              <td className="px-4 py-3 text-gray-500 text-sm">{l.approved_by_name || '—'}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+              </div>
+              <div className="text-xs space-y-1 dark:text-gray-300">
+                <p><span className="text-gray-400 font-medium">Timeline:</span> <span className="font-semibold">{l.start_date} → {l.end_date}</span></p>
+                <p><span className="text-gray-400 font-medium">Approved By:</span> <span className="font-semibold">{l.approved_by_name || '—'}</span></p>
+                {l.reason && (
+                  <p className="mt-1 bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/5 p-2 rounded-xl text-gray-500 dark:text-gray-400">{l.reason}</p>
+                )}
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+    </>
   );
 
   // ── Calendar Tab ─────────────────────────────────────────────

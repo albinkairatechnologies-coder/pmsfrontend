@@ -108,6 +108,7 @@ export default function TaskDetailPage() {
   const [showMemberSelect, setShowMemberSelect] = useState<'participant' | 'observer' | null>(null);
   const [memberSearch, setMemberSearch] = useState('');
   const [activePanel, setActivePanel] = useState<'chat' | 'logs' | 'subtasks' | 'history' | 'alerts'>('chat');
+  const [mobileActiveTab, setMobileActiveTab] = useState<'details' | 'chat'>('details');
   const [subtasks, setSubtasks] = useState<any[]>([]);
   const [newSubtask, setNewSubtask] = useState('');
   const [subtaskAssignee, setSubtaskAssignee] = useState<string>('');
@@ -510,7 +511,33 @@ export default function TaskDetailPage() {
   if (!task) return <div className="flex h-full items-center justify-center animate-pulse text-indigo-500 font-bold text-xs">Loading...</div>;
 
   return (
-    <div className="flex h-[calc(100vh-64px)] -mt-10 -mx-6 overflow-hidden bg-[#F8FAFC] dark:bg-[#08090D] relative font-sans">
+    <div className="flex flex-col lg:flex-row h-[calc(100vh-64px)] -mt-10 -mx-6 overflow-hidden bg-[#F8FAFC] dark:bg-[#08090D] relative font-sans">
+      
+      {/* Mobile Tab Switcher */}
+      <div className="lg:hidden flex bg-[#ffffff] dark:bg-[#0B0E14] border-b border-gray-200 dark:border-white/5 z-50 flex-shrink-0">
+        <button
+          type="button"
+          onClick={() => setMobileActiveTab('details')}
+          className={`flex-1 py-3 text-center text-[10px] font-black uppercase tracking-wider transition-all border-b-2 ${
+            mobileActiveTab === 'details'
+              ? 'border-indigo-600 text-indigo-600 dark:border-gold-500 dark:text-gold-500'
+              : 'border-transparent text-gray-400'
+          }`}
+        >
+          📋 Details
+        </button>
+        <button
+          type="button"
+          onClick={() => setMobileActiveTab('chat')}
+          className={`flex-1 py-3 text-center text-[10px] font-black uppercase tracking-wider transition-all border-b-2 ${
+            mobileActiveTab === 'chat'
+              ? 'border-indigo-600 text-indigo-600 dark:border-gold-500 dark:text-gold-500'
+              : 'border-transparent text-gray-400'
+          }`}
+        >
+          💬 Chat & Activity
+        </button>
+      </div>
       
       {showMemberSelect && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-md z-[600] flex items-center justify-center p-4">
@@ -615,7 +642,7 @@ export default function TaskDetailPage() {
 
       {/* COMPACT SIDEBAR */}
       {/* PREMIUM MODERNISED SIDEBAR */}
-      <div className="w-[360px] h-full flex flex-col border-r border-gray-200 dark:border-white/5 bg-[#ffffff] dark:bg-[#0B0E14] overflow-y-auto custom-scrollbar shadow-sm">
+      <div className={`${mobileActiveTab === 'details' ? 'flex' : 'hidden lg:flex'} w-full lg:w-[360px] h-full flex flex-col border-r border-gray-200 dark:border-white/5 bg-[#ffffff] dark:bg-[#0B0E14] overflow-y-auto custom-scrollbar shadow-sm`}>
         
         {/* Gold Rewards Banner - Re-styled to be more integrated */}
         <div className="px-5 pt-6 pb-4">
@@ -887,7 +914,7 @@ export default function TaskDetailPage() {
 
       {/* RIGHT PANEL */}
       {/* RIGHT PANEL (Chat Area) */}
-      <div className="flex-1 flex flex-col h-full bg-[#94b9d8] dark:bg-[#0A0B10] relative overflow-hidden">
+      <div className={`${mobileActiveTab === 'chat' ? 'flex' : 'hidden lg:flex'} flex-1 flex flex-col h-full bg-[#94b9d8] dark:bg-[#0A0B10] relative overflow-hidden`}>
          {/* Patterned Background */}
          <div className="absolute inset-0 opacity-[0.15] dark:opacity-[0.05]" style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg width='120' height='120' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M11 18c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7z' fill='%23ffffff' fill-opacity='0.5'/%3E%3Cpath d='M45 65c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm30-40c2.2 0 4-1.8 4-4s-1.8-4-4-4-4 1.8-4 4 1.8 4 4 4z' fill='%23ffffff' fill-opacity='0.5'/%3E%3Cpath d='M20 80l5-5 5 5-5 5zM80 80l5-5 5 5-5 5zM50 20l5-5 5 5-5 5z' fill='%23ffffff' fill-opacity='0.5'/%3E%3C/svg%3E")` }} />
 

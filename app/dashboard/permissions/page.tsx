@@ -224,37 +224,68 @@ export default function PermissionsPage() {
 
   // ── My History Tab ───────────────────────────────────────────
   const MyView = () => (
-    <div className="card overflow-hidden p-0">
-      <table className="w-full text-sm">
-        <thead className="bg-gray-50 dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700">
-          <tr>
-            {['Date', 'From', 'To', 'Duration', 'Reason', 'Status', 'Approved By'].map(h => (
-              <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">{h}</th>
+    <>
+      {/* Desktop Table View */}
+      <div className="hidden md:block card overflow-hidden p-0">
+        <table className="w-full text-sm">
+          <thead className="bg-gray-50 dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700">
+            <tr>
+              {['Date', 'From', 'To', 'Duration', 'Reason', 'Status', 'Approved By'].map(h => (
+                <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">{h}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {myPerms.length === 0 && (
+              <tr><td colSpan={7} className="px-4 py-10 text-center text-gray-400">No permission requests found</td></tr>
+            )}
+            {myPerms.map((p: any) => (
+              <tr key={p.id} className="border-b border-gray-50 dark:border-gray-800 hover:bg-gray-50/70 dark:hover:bg-gray-800/50">
+                <td className="px-4 py-3 font-medium text-gray-800 dark:text-white">{p.date}</td>
+                <td className="px-4 py-3 font-mono text-gray-600 dark:text-gray-300">{p.from_time}</td>
+                <td className="px-4 py-3 font-mono text-gray-600 dark:text-gray-300">{p.to_time}</td>
+                <td className="px-4 py-3 text-blue-600 font-semibold">{p.duration_minutes}m</td>
+                <td className="px-4 py-3 max-w-xs truncate text-gray-500">{p.reason}</td>
+                <td className="px-4 py-3">
+                  <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${STATUS_STYLES[p.status]}`}>
+                    {p.status.toUpperCase()}
+                  </span>
+                </td>
+                <td className="px-4 py-3 text-gray-500">{p.approved_by_name || '—'}</td>
+              </tr>
             ))}
-          </tr>
-        </thead>
-        <tbody>
-          {myPerms.length === 0 && (
-            <tr><td colSpan={7} className="px-4 py-10 text-center text-gray-400">No permission requests found</td></tr>
-          )}
-          {myPerms.map((p: any) => (
-            <tr key={p.id} className="border-b border-gray-50 dark:border-gray-800 hover:bg-gray-50/70 dark:hover:bg-gray-800/50">
-              <td className="px-4 py-3 font-medium text-gray-800 dark:text-white">{p.date}</td>
-              <td className="px-4 py-3 font-mono text-gray-600 dark:text-gray-300">{p.from_time}</td>
-              <td className="px-4 py-3 font-mono text-gray-600 dark:text-gray-300">{p.to_time}</td>
-              <td className="px-4 py-3 text-blue-600 font-semibold">{p.duration_minutes}m</td>
-              <td className="px-4 py-3 max-w-xs truncate text-gray-500">{p.reason}</td>
-              <td className="px-4 py-3">
-                <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${STATUS_STYLES[p.status]}`}>
+          </tbody>
+        </table>
+      </div>
+
+      {/* Mobile Card List View */}
+      <div className="md:hidden space-y-4">
+        {myPerms.length === 0 ? (
+          <div className="card text-center text-gray-400 py-10">No permission requests found</div>
+        ) : (
+          myPerms.map((p: any) => (
+            <div key={p.id} className="card p-4 space-y-3">
+              <div className="flex justify-between items-start">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold text-gray-800 dark:text-white">{p.date}</span>
+                  <span className="text-xs text-blue-600 font-extrabold bg-blue-500/10 px-2 py-0.5 rounded-lg">{p.duration_minutes}m</span>
+                </div>
+                <span className={`text-[10px] font-black px-2.5 py-1 rounded-full ${STATUS_STYLES[p.status]}`}>
                   {p.status.toUpperCase()}
                 </span>
-              </td>
-              <td className="px-4 py-3 text-gray-500">{p.approved_by_name || '—'}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+              </div>
+              <div className="text-xs space-y-1 dark:text-gray-300">
+                <p><span className="text-gray-400 font-medium">Timeline:</span> <span className="font-mono font-semibold">{p.from_time} → {p.to_time}</span></p>
+                <p><span className="text-gray-400 font-medium">Approved By:</span> <span className="font-semibold">{p.approved_by_name || '—'}</span></p>
+                {p.reason && (
+                  <p className="mt-1 bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/5 p-2 rounded-xl text-gray-500 dark:text-gray-400">{p.reason}</p>
+                )}
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+    </>
   );
 
   // ── Admin Tab ────────────────────────────────────────────────
