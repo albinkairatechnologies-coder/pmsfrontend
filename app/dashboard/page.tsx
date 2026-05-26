@@ -165,7 +165,7 @@ export default function DashboardPage() {
         if (d?.data) setStats(d.data);
         if (s?.data) setSalaryStats(s.data);
       }
-      else if (user.role === 'team_lead' || user.role === 'crm_head') {
+      else if (user.role === 'team_lead' || user.role === 'crm_head' || user.role === 'bdm' || user.role === 'bdm_head') {
         const res = await dashboardAPI.getLeadDashboard().catch(() => null);
         if (res?.data) setStats(res.data);
       }
@@ -492,8 +492,8 @@ export default function DashboardPage() {
     </div>
   );
 
-  /* ── Team Lead / CRM ── */
-  if (user?.role === 'team_lead' || user?.role === 'crm_head') return (
+  /* ── Team Lead / CRM / BDM ── */
+  if (user?.role === 'team_lead' || user?.role === 'crm_head' || user?.role === 'bdm' || user?.role === 'bdm_head') return (
     <div className="p-6 space-y-6">
       {showImage && (
         <div 
