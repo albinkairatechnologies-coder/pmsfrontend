@@ -5,10 +5,11 @@ import { usePathname } from 'next/navigation';
 import { FiHome, FiUsers, FiCheckSquare, FiClock, FiBarChart2, FiLogOut, FiMoon, FiSun, FiGrid, FiSettings, FiCalendar, FiActivity, FiUmbrella, FiShield, FiMessageSquare, FiPieChart, FiChevronDown, FiChevronRight, FiDollarSign, FiUser, FiGlobe, FiFolder, FiTrendingUp, FiHardDrive, FiX, FiFileText } from 'react-icons/fi';
 import { useAuth } from '../utils/AuthContext';
 import { useState, useEffect } from 'react';
-import { domainAPI, announcementAPI, taskAPI, API_URL } from '../utils/api';
+import { domainAPI, announcementAPI, taskAPI, companyAPI, API_URL } from '../utils/api';
 
 const ROLE_COLORS: Record<string, string> = {
   admin:          'bg-red-500/20 text-red-400 border-red-500/30',
+  bdm_head:       'bg-orange-500/20 text-orange-400 border-orange-500/30',
   bdm:            'bg-amber-500/20 text-amber-400 border-amber-500/30',
   marketing_head: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
   team_lead:      'bg-purple-500/20 text-purple-400 border-purple-500/30',
@@ -44,8 +45,20 @@ export default function Sidebar({ isOpen, setIsOpen }: { isOpen: boolean, setIsO
     // Announcement unread count for all roles
     announcementAPI.getUnreadCount().then(r => setAnnouncementCount(r.data.count)).catch(() => {});
 
+    // Fetch dynamic role permissions from backend and cache
+    companyAPI.getLetterhead().then((r: any) => {
+      if (r.data.role_permissions) {
+        try {
+          const parsed = typeof r.data.role_permissions === 'string'
+            ? JSON.parse(r.data.role_permissions)
+            : r.data.role_permissions;
+          localStorage.setItem('role_permissions', JSON.stringify(parsed));
+        } catch(e) {}
+      }
+    }).catch(() => {});
+
     const t = setInterval(() => {
-      if (['admin', 'bdm', 'crm_head', 'marketing_head', 'team_lead'].includes(user.role)) {
+      if (['admin', 'bdm', 'crm_head', 'marketing_head', 'team_lead', 'bdm_head'].includes(user.role)) {
         domainAPI.getAlerts().then(r => setDomainAlertCount(r.data.total_alerts)).catch(() => {});
       }
       taskAPI.getMyCount().then(r => setTaskCount(r.data.count)).catch(() => {});
@@ -89,7 +102,32 @@ export default function Sidebar({ isOpen, setIsOpen }: { isOpen: boolean, setIsO
     { href: '/dashboard/worklogs', icon: FiClock, label: 'Work Logs', roles: ['admin', 'bdm', 'marketing_head', 'developer', 'smm', 'video_editor', 'designer', 'crm_head', 'crm', 'team_lead', 'employee'] },
   ];
 
-  const filteredNavItems = navItems.filter(item => item.roles.includes(user?.role || ''));
+  const getRolesForItem = (label: string, defaultRoles: string[]) => {
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem('role_permissions');
+      if (stored) {
+        try {
+          const parsed = JSON.parse(stored);
+          const key = label.toLowerCase().replace(/\s+/g, '_');
+          if (parsed && parsed[key]) {
+            const roles = [...parsed[key]];
+            if (!roles.includes('admin')) roles.push('admin');
+            return roles;
+          }
+        } catch(e) {}
+      }
+    }
+    const rolesList = [...defaultRoles];
+    if ((rolesList.includes('bdm') || rolesList.includes('crm_head')) && !rolesList.includes('bdm_head')) {
+      rolesList.push('bdm_head');
+    }
+    return rolesList;
+  };
+
+  const filteredNavItems = navItems.filter(item => {
+    const allowedRoles = getRolesForItem(item.label || '', item.roles);
+    return allowedRoles.includes(user?.role || '');
+  });
 
   useEffect(() => {
     // Auto-expand menu if sub-item is active

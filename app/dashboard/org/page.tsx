@@ -125,6 +125,7 @@ export default function OrgPage() {
 
   const roleColors: Record<string, string> = {
     admin: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400',
+    bdm_head: 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400',
     bdm: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400',
     team_lead: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400',
     marketing_head: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400',
@@ -139,6 +140,7 @@ export default function OrgPage() {
 
   const roleIcons: Record<string, string> = {
     admin: '👑',
+    bdm_head: '👔',
     bdm: '💼',
     team_lead: '🛡️',
     marketing_head: '📢',
@@ -158,6 +160,12 @@ export default function OrgPage() {
         avatar: 'bg-red-500/10 text-red-500',
         text: 'text-red-500 dark:text-red-400',
         border: 'border-red-500/20'
+      },
+      bdm_head: {
+        card: 'bg-orange-500/5 dark:bg-orange-500/5 border-orange-500/10 hover:border-orange-500/30',
+        avatar: 'bg-orange-500/10 text-orange-500',
+        text: 'text-orange-500 dark:text-orange-400',
+        border: 'border-orange-500/20'
       },
       bdm: {
         card: 'bg-amber-500/5 dark:bg-amber-500/5 border-amber-500/10 hover:border-amber-500/30',
@@ -740,6 +748,7 @@ export default function OrgPage() {
                 <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 dark:text-gray-500 ml-2 block">Official Role</label>
                 <select value={memberForm.role} onChange={e => setMemberForm({ ...memberForm, role: e.target.value })} className="input-premium-lux">
                   <option value="admin">System Admin</option>
+                  <option value="bdm_head">BDM Head</option>
                   <option value="bdm">BDM</option>
                   <option value="crm_head">CRM Head</option>
                   <option value="crm">CRM</option>
