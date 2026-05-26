@@ -207,6 +207,7 @@ export default function TrackPage() {
   const [autoOpenNew, setAutoOpenNew] = useState(true);
   const [cycleTimer, setCycleTimer] = useState(6);
   const [newTaskAlert, setNewTaskAlert] = useState<string | null>(null);
+  const [mobileActiveTab, setMobileActiveTab] = useState<'status' | 'chat'>('status');
 
   const selectedTaskIdRef = useRef<number | null>(null);
   const autoOpenNewRef = useRef(true);
@@ -535,33 +536,34 @@ export default function TrackPage() {
     <div className="min-h-screen bg-[#F8FAFC] dark:bg-[#08090D] text-gray-900 dark:text-white flex flex-col overflow-hidden font-sans transition-colors">
       
       {/* Premium Header */}
-      <header className="px-6 py-4 bg-white/70 dark:bg-[#0F111A]/80 backdrop-blur-md border-b border-gray-100 dark:border-white/5 flex items-center justify-between z-10 flex-shrink-0">
-        <div>
-          <div className="flex items-center gap-2 mb-1">
-            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-            <span className="text-[8px] uppercase tracking-widest font-black text-emerald-500 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full">
+      <header className="px-4 py-3 sm:px-6 sm:py-4 bg-white/70 dark:bg-[#0F111A]/80 backdrop-blur-md border-b border-gray-100 dark:border-white/5 flex items-center justify-between z-10 flex-shrink-0">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2 mb-0.5">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+            <span className="text-[7px] sm:text-[8px] uppercase tracking-widest font-black text-emerald-500 bg-emerald-500/10 border border-emerald-500/20 px-1.5 py-0.5 rounded-full">
               Live Secure Channel
             </span>
           </div>
-          <h1 className="text-xl font-black uppercase tracking-tight text-indigo-600 dark:text-indigo-400">
+          <h1 className="text-sm sm:text-xl font-black uppercase tracking-tight text-indigo-600 dark:text-indigo-400 truncate">
             {client.company_name} Workspace
           </h1>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
           {selectedTaskId && (
             <button
               onClick={() => setShowVideoCall(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-[#8e44ad] hover:bg-[#732d91] text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all duration-200 active:scale-[0.98] shadow-md shadow-purple-500/10 mr-1"
+              className="flex items-center gap-1.5 sm:gap-2 px-3 py-1.5 sm:px-4 sm:py-2 bg-[#8e44ad] hover:bg-[#732d91] text-white rounded-xl text-[10px] sm:text-xs font-black uppercase tracking-wider transition-all duration-200 active:scale-[0.98] shadow-md shadow-purple-500/10"
+              title="Join Live Video Call"
             >
-              <FiVideo size={14} className="stroke-[2.5]" />
-              <span>Join Call</span>
+              <FiVideo size={12} className="stroke-[2.5] sm:w-[14px] sm:h-[14px]" />
+              <span>Join <span className="hidden sm:inline">Call</span></span>
             </button>
           )}
-          <div className="flex items-center gap-3 px-4 py-2 bg-slate-50 dark:bg-white/[0.02] border border-gray-100 dark:border-white/5 rounded-2xl">
-            <FiBriefcase className="text-indigo-500" size={16} />
-            <div className="text-left hidden sm:block">
-              <p className="text-[8px] uppercase tracking-wider text-gray-400 font-extrabold">Active Client</p>
-              <p className="text-xs font-bold text-gray-800 dark:text-gray-200">
+          <div className="hidden sm:flex items-center gap-2 sm:gap-3 px-3 py-1.5 sm:px-4 sm:py-2 bg-slate-50 dark:bg-white/[0.02] border border-gray-100 dark:border-white/5 rounded-2xl">
+            <FiBriefcase className="text-indigo-500" size={14} />
+            <div className="text-left">
+              <p className="text-[7px] uppercase tracking-wider text-gray-400 font-extrabold">Active Client</p>
+              <p className="text-[11px] font-bold text-gray-800 dark:text-gray-200 truncate max-w-[80px]">
                 {client.contact_person}
               </p>
             </div>
@@ -573,7 +575,7 @@ export default function TrackPage() {
       <div className="flex-1 flex flex-col md:flex-row overflow-hidden relative">
         
         {/* Left Column: Client Tasks Switcher */}
-        <aside className="w-full md:w-80 bg-white/40 dark:bg-[#0A0B12]/40 border-r border-gray-100 dark:border-white/5 p-4 flex flex-col overflow-y-auto flex-shrink-0 gap-3 md:max-h-full">
+        <aside className={`${client.tasks?.length <= 1 ? 'hidden md:flex' : 'flex'} w-full md:w-80 bg-white/40 dark:bg-[#0A0B12]/40 border-r border-gray-100 dark:border-white/5 p-4 flex-col overflow-y-auto flex-shrink-0 gap-3 md:max-h-full`}>
           
           <div className="flex flex-col gap-2.5 mb-2 bg-white/60 dark:bg-[#0F111A]/40 p-4 rounded-2xl border border-gray-100 dark:border-white/5 shadow-sm">
             <div className="flex items-center justify-between">
@@ -686,8 +688,36 @@ export default function TrackPage() {
         {selectedTaskId && activeTask ? (
           <div className="flex-1 flex flex-col lg:flex-row overflow-hidden max-h-full">
             
+            {/* Mobile Tab Switcher */}
+            <div className="lg:hidden flex bg-white dark:bg-[#0B0C15] border-b border-gray-100 dark:border-white/5 z-10 flex-shrink-0">
+              <button
+                type="button"
+                onClick={() => setMobileActiveTab('status')}
+                className={`flex-1 py-3 px-4 text-center text-[10px] sm:text-xs font-black uppercase tracking-wider transition-all border-b-2 flex items-center justify-center gap-2 ${
+                  mobileActiveTab === 'status'
+                    ? 'border-indigo-600 text-indigo-600 dark:border-indigo-400 dark:text-indigo-400 bg-indigo-50/20 dark:bg-white/[0.02]'
+                    : 'border-transparent text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'
+                }`}
+              >
+                <FiActivity size={14} className="stroke-[2.5]" />
+                <span>Project Status</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setMobileActiveTab('chat')}
+                className={`flex-1 py-3 px-4 text-center text-[10px] sm:text-xs font-black uppercase tracking-wider transition-all border-b-2 flex items-center justify-center gap-2 ${
+                  mobileActiveTab === 'chat'
+                    ? 'border-indigo-600 text-indigo-600 dark:border-indigo-400 dark:text-indigo-400 bg-indigo-50/20 dark:bg-white/[0.02]'
+                    : 'border-transparent text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'
+                }`}
+              >
+                <FiMessageSquare size={14} className="stroke-[2.5]" />
+                <span>Live Chat</span>
+              </button>
+            </div>
+            
             {/* Center Area: Task Stepper & Info */}
-            <main className="flex-1 p-6 overflow-y-auto space-y-6 lg:max-h-full scrollbar-thin">
+            <main className={`${mobileActiveTab === 'status' ? 'block' : 'hidden lg:block'} flex-1 p-4 sm:p-6 overflow-y-auto space-y-4 sm:space-y-6 lg:max-h-full scrollbar-thin`}>
               {taskLoading ? (
                 <div className="flex items-center justify-center h-48 animate-pulse text-indigo-500 font-bold text-xs uppercase tracking-widest">
                   Loading project status...
@@ -701,8 +731,8 @@ export default function TrackPage() {
                       <div className="w-full bg-white/80 dark:bg-[#11131E]/60 border border-indigo-500/20 dark:border-indigo-500/10 p-5 rounded-3xl shadow-[0_8px_30px_rgba(99,102,241,0.06)] relative overflow-hidden backdrop-blur-md">
                         <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/5 via-purple-500/2 to-pink-500/5 opacity-70"></div>
                         <div className="absolute top-0 bottom-0 left-0 w-1 bg-gradient-to-b from-indigo-500 via-purple-500 to-pink-500"></div>
-                        <div className="relative z-10 pl-2">
-                          <div className="flex justify-between items-center mb-2.5">
+                        <div className="relative z-10 pl-1 sm:pl-2">
+                          <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-3 mb-3">
                             <div>
                               <p className="text-[9px] uppercase tracking-widest text-indigo-600 dark:text-indigo-400 font-extrabold flex items-center gap-1.5">
                                 <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse"></span>
@@ -712,7 +742,7 @@ export default function TrackPage() {
                                 <span>🚀</span> Status: {progress === 100 ? 'Completed 🎉' : activeTask.status.replace(/_/g, ' ')}
                               </h3>
                             </div>
-                            <span className="text-[10px] font-black text-white bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 shadow-md shadow-indigo-500/30 px-3 py-1.5 rounded-full">
+                            <span className="self-start sm:self-auto text-[10px] font-black text-white bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 shadow-md shadow-indigo-500/30 px-3 py-1.5 rounded-full">
                               {progress}% Complete
                             </span>
                           </div>
@@ -963,7 +993,7 @@ export default function TrackPage() {
             </main>
 
             {/* Right Chat Column: Task Chat Widget */}
-            <section className="w-full lg:w-96 bg-white/70 dark:bg-[#0B0C15]/80 border-t lg:border-t-0 lg:border-l border-gray-100 dark:border-white/5 flex flex-col overflow-hidden max-h-[500px] lg:max-h-full lg:h-full flex-shrink-0 relative">
+            <section className={`${mobileActiveTab === 'chat' ? 'flex flex-1' : 'hidden lg:flex'} w-full lg:w-96 bg-white/70 dark:bg-[#0B0C15]/80 border-t lg:border-t-0 lg:border-l border-gray-100 dark:border-white/5 flex-col overflow-hidden max-h-full lg:max-h-full lg:h-full flex-shrink-0 relative`}>
               
               {/* Chat Header */}
               <div className="px-5 py-3 border-b border-gray-100 dark:border-white/5 flex items-center gap-2 flex-shrink-0 bg-white/80 dark:bg-[#0F111A]/80">
