@@ -181,12 +181,14 @@ export default function Sidebar({ isOpen, setIsOpen }: { isOpen: boolean, setIsO
 
       <div className={`sidebar w-64 bg-sidebar dark:bg-sidebar h-screen fixed left-0 top-0 flex flex-col border-r border-sidebar-border z-[120] transition-transform duration-300 lg:translate-x-0 ${isOpen ? 'translate-x-0' : '-translate-x-full'}`}>
         {/* Close button for mobile */}
-        <button 
-          onClick={() => setIsOpen(false)}
-          className="absolute top-5 -right-12 p-2 bg-sidebar dark:bg-sidebar text-white rounded-r-xl lg:hidden shadow-xl"
-        >
-          <FiX size={20} />
-        </button>
+        {isOpen && (
+          <button 
+            onClick={() => setIsOpen(false)}
+            className="absolute top-5 -right-12 p-2 bg-sidebar dark:bg-sidebar text-white rounded-r-xl lg:hidden shadow-xl"
+          >
+            <FiX size={20} />
+          </button>
+        )}
 
         {/* Brand */}
         <div className="px-5 py-5 border-b border-white/5">
