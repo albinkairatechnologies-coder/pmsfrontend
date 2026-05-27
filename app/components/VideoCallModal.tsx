@@ -80,6 +80,7 @@ export default function VideoCallModal({ roomId, userName, isCaller, onClose }: 
   const [micMuted,     setMicMuted]     = useState(false);
   const [camOff,       setCamOff]       = useState(false);
   const [audioOnly,    setAudioOnly]    = useState(false);  // true when no camera found but mic OK
+  const [isViewer,     setIsViewer]     = useState(false);  // true when no mic/camera or chosen viewer mode
   const [remoteStream, setRemoteStream] = useState(false);
   const [callDuration, setCallDuration] = useState(0);
   const [mediaError,   setMediaError]   = useState<{ title: string; detail: string; canRetry: boolean } | null>(null);
@@ -225,11 +226,20 @@ export default function VideoCallModal({ roomId, userName, isCaller, onClose }: 
   }, [roomId, cleanup, startPolling]);
 
   // ── Setup RTCPeerConnection after getting stream ───────────────────────────
-  const setupPeerConnection = useCallback((stream: MediaStream) => {
+  const setupPeerConnection = useCallback((stream: MediaStream | null) => {
     const pc = new RTCPeerConnection({ iceServers: STUN_SERVERS });
     pcRef.current = pc;
 
-    stream.getTracks().forEach(track => pc.addTrack(track, stream));
+    if (stream) {
+      stream.getTracks().forEach(track => pc.addTrack(track, stream));
+    } else {
+      try {
+        pc.addTransceiver('video', { direction: 'recvonly' });
+        pc.addTransceiver('audio', { direction: 'recvonly' });
+      } catch (e) {
+        console.warn('Transceivers not supported:', e);
+      }
+    }
 
     pc.onicecandidate = (ev) => {
       if (ev.candidate) postIce(ev.candidate);
@@ -257,39 +267,48 @@ export default function VideoCallModal({ roomId, userName, isCaller, onClose }: 
   }, [postIce, cleanup]);
 
   // ── Init WebRTC with graceful fallbacks ───────────────────────────────────
-  const initCall = useCallback(async () => {
+  const initCall = useCallback(async (forceViewer: boolean = false) => {
     hangingUpRef.current = false;
     iceSinceRef.current  = 0;
     connectedRef.current = false;
     setMediaError(null);
     setStatus('connecting');
-    setAudioOnly(false);
-    setCamOff(false);
-    setMicMuted(false);
 
     let stream: MediaStream | null = null;
 
-    // Try video+audio first
-    try {
-      stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-    } catch (videoErr) {
-      // Try audio-only fallback
+    if (forceViewer) {
+      setAudioOnly(true);
+      setCamOff(true);
+      setMicMuted(true);
+      setIsViewer(true);
+    } else {
+      setAudioOnly(false);
+      setCamOff(false);
+      setMicMuted(false);
+      setIsViewer(false);
+
+      // Try video+audio first
       try {
-        stream = await navigator.mediaDevices.getUserMedia({ video: false, audio: true });
-        setAudioOnly(true);
-        setCamOff(true);
-      } catch (audioErr) {
-        // Both failed — show friendly error card
-        const info = getMediaErrorMessage(videoErr);
-        setMediaError(info);
-        return;
+        stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+      } catch (videoErr) {
+        // Try audio-only fallback
+        try {
+          stream = await navigator.mediaDevices.getUserMedia({ video: false, audio: true });
+          setAudioOnly(true);
+          setCamOff(true);
+        } catch (audioErr) {
+          // Both failed — show friendly error card
+          const info = getMediaErrorMessage(videoErr);
+          setMediaError(info);
+          return;
+        }
       }
     }
 
-    if (!mountedRef.current) { stream.getTracks().forEach(t => t.stop()); return; }
+    if (!mountedRef.current) { stream?.getTracks().forEach(t => t.stop()); return; }
     localStreamRef.current = stream;
 
-    if (localVideoRef.current && stream.getVideoTracks().length > 0) {
+    if (localVideoRef.current && stream && stream.getVideoTracks().length > 0) {
       localVideoRef.current.srcObject = stream;
     }
 
@@ -314,6 +333,7 @@ export default function VideoCallModal({ roomId, userName, isCaller, onClose }: 
 
   // ── Toggle mic ────────────────────────────────────────────────────────────
   const toggleMic = () => {
+    if (isViewer) return;
     const audioTrack = localStreamRef.current?.getAudioTracks()[0];
     if (audioTrack) {
       audioTrack.enabled = !audioTrack.enabled;
@@ -323,7 +343,7 @@ export default function VideoCallModal({ roomId, userName, isCaller, onClose }: 
 
   // ── Toggle camera ─────────────────────────────────────────────────────────
   const toggleCam = () => {
-    if (audioOnly) return; // no camera available
+    if (audioOnly || isViewer) return; // no camera available or viewer mode
     const videoTrack = localStreamRef.current?.getVideoTracks()[0];
     if (videoTrack) {
       videoTrack.enabled = !videoTrack.enabled;
@@ -339,10 +359,16 @@ export default function VideoCallModal({ roomId, userName, isCaller, onClose }: 
   };
 
   const statusLabel = {
-    connecting: audioOnly ? 'Audio-only mode — no camera found' : 'Setting up camera...',
+    connecting: isViewer
+      ? 'Connecting as Viewer/Listener...'
+      : audioOnly
+      ? 'Audio-only mode — no camera found'
+      : 'Setting up camera...',
     calling:    'Calling... waiting for others to join',
     ringing:    'Waiting for host to start call...',
-    connected:  `Connected · ${formatDuration(callDuration)}`,
+    connected:  isViewer
+      ? `Listening/Watching · ${formatDuration(callDuration)}`
+      : `Connected · ${formatDuration(callDuration)}`,
     ended:      'Call ended',
   }[status];
 
@@ -369,6 +395,15 @@ export default function VideoCallModal({ roomId, userName, isCaller, onClose }: 
                 <FiRefreshCw size={16} /> Try Again
               </button>
             )}
+            <button
+              onClick={() => {
+                setMediaError(null);
+                initCall(true); // force viewer mode
+              }}
+              className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-sm transition-all active:scale-95 shadow-lg shadow-emerald-600/20"
+            >
+              👁️ Join as Viewer / Listener
+            </button>
             <button
               onClick={onClose}
               className="w-full py-3 bg-white/5 hover:bg-white/10 text-white/70 rounded-xl font-bold text-sm transition-all border border-white/10"
@@ -397,14 +432,19 @@ export default function VideoCallModal({ roomId, userName, isCaller, onClose }: 
           <div className="flex items-center gap-2">
             <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
             <span className="text-white font-bold text-sm tracking-tight">
-              {audioOnly ? '🎙️ AUDIO CALL' : '🎥 LIVE MEETING'}
+              {isViewer ? '👁️ VIEWER MODE' : audioOnly ? '🎙️ AUDIO CALL' : '🎥 LIVE MEETING'}
             </span>
           </div>
           <div className="hidden sm:block h-4 w-px bg-white/20" />
           <span className="hidden sm:block text-white/50 text-xs font-medium truncate max-w-[200px]">{roomId.replace(/_/g, ' ')}</span>
         </div>
         <div className="flex items-center gap-2">
-          {audioOnly && (
+          {isViewer && (
+            <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 animate-pulse">
+              Viewer
+            </span>
+          )}
+          {audioOnly && !isViewer && (
             <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-yellow-500/20 text-yellow-400 border border-yellow-500/30">
               Audio Only
             </span>
@@ -506,30 +546,33 @@ export default function VideoCallModal({ roomId, userName, isCaller, onClose }: 
         {/* Mic toggle */}
         <button
           onClick={toggleMic}
+          disabled={isViewer}
           className={`w-12 h-12 rounded-full flex items-center justify-center transition-all active:scale-90 shadow-lg ${
-            micMuted
-              ? 'bg-red-500/90 text-white shadow-red-500/30 hover:bg-red-600'
-              : 'bg-white/10 text-white hover:bg-white/20 border border-white/10'
+            isViewer
+              ? 'bg-gray-800 text-gray-600 cursor-not-allowed border border-gray-700'
+              : micMuted
+                ? 'bg-red-500/90 text-white shadow-red-500/30 hover:bg-red-600'
+                : 'bg-white/10 text-white hover:bg-white/20 border border-white/10'
           }`}
-          title={micMuted ? 'Unmute microphone' : 'Mute microphone'}
+          title={isViewer ? 'No microphone in viewer mode' : micMuted ? 'Unmute microphone' : 'Mute microphone'}
         >
-          {micMuted ? <FiMicOff size={20} /> : <FiMic size={20} />}
+          {micMuted || isViewer ? <FiMicOff size={20} /> : <FiMic size={20} />}
         </button>
 
-        {/* Camera toggle (disabled in audio-only) */}
+        {/* Camera toggle (disabled in audio-only or viewer mode) */}
         <button
           onClick={toggleCam}
-          disabled={audioOnly}
+          disabled={audioOnly || isViewer}
           className={`w-12 h-12 rounded-full flex items-center justify-center transition-all active:scale-90 shadow-lg ${
-            audioOnly
+            audioOnly || isViewer
               ? 'bg-gray-800 text-gray-600 cursor-not-allowed border border-gray-700'
               : camOff
                 ? 'bg-red-500/90 text-white shadow-red-500/30 hover:bg-red-600'
                 : 'bg-white/10 text-white hover:bg-white/20 border border-white/10'
           }`}
-          title={audioOnly ? 'No camera available' : camOff ? 'Turn on camera' : 'Turn off camera'}
+          title={isViewer ? 'No camera in viewer mode' : audioOnly ? 'No camera available' : camOff ? 'Turn on camera' : 'Turn off camera'}
         >
-          {camOff || audioOnly ? <FiVideoOff size={20} /> : <FiVideo size={20} />}
+          {camOff || audioOnly || isViewer ? <FiVideoOff size={20} /> : <FiVideo size={20} />}
         </button>
 
         {/* End call */}
