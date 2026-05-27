@@ -41,35 +41,33 @@
 }
 
 @layer components {
-
   /* ── Luxury Glow Card ───────────────────────────── */
-  /* Light mode: clean white card with subtle colored border on hover */
-  /* Dark mode: deep dark card with gold glow */
-  /* Flat Simple Card */
   .glow-card {
     position: relative;
     background: #ffffff;
-    border: 1px solid rgba(0,0,0,.08);
-    border-radius: 1rem;
+    border: 1px solid rgba(0,0,0,.06);
+    border-radius: 1.25rem;
     overflow: hidden;
+    box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.05), 0 2px 8px -1px rgba(0, 0, 0, 0.03);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   }
   .glow-card:hover {
-    border-color: rgba(99,102,241,0.2);
-    box-shadow: none;
-    transform: none;
+    border-color: rgba(99,102,241,0.25);
+    box-shadow: 0 12px 30px -4px rgba(99,102,241,0.12), 0 4px 12px -2px rgba(99,102,241,0.04);
+    transform: translateY(-3px);
   }
   .dark .glow-card {
-    background: #171923;
-    border-color: rgba(255,255,255,0.05);
+    background: #1A1D2A;
+    border-color: rgba(255,255,255,0.06);
+    box-shadow: 0 4px 20px -2px rgba(0,0,0,0.3);
   }
   .dark .glow-card:hover {
     border-color: rgba(245, 200, 66, 0.3);
-    background: #1C1F2B;
-    box-shadow: none;
-    transform: none;
+    background: #222637;
+    box-shadow: 0 12px 35px -5px rgba(0,0,0,0.45), 0 0 25px rgba(245,200,66,0.08);
+    transform: translateY(-3px);
   }
 
-  /* ── Neon Border Card ────────────────────────────── */
   .neon-card {
     position: relative;
     background: #ffffff;
@@ -216,21 +214,25 @@
            px-4 py-2.5 rounded-xl shadow-sm transition-all duration-150;
   }
 
-  /* ── Cards ───────────────────────────────────────── */
   .card {
-    @apply bg-white dark:bg-surface-dark
-           rounded-2xl border border-gray-100 dark:border-gray-800
-           shadow-card p-6
-           transition-shadow duration-200;
+    @apply rounded-2xl p-6 transition-all duration-300;
+    background: #ffffff;
+    border: 1px solid rgba(0,0,0,.06);
+    box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.05), 0 2px 8px -1px rgba(0, 0, 0, 0.03);
+  }
+  .dark .card {
+    background: #1A1D2A;
+    border-color: rgba(255,255,255,0.06);
+    box-shadow: 0 4px 20px -2px rgba(0,0,0,0.3);
   }
 
   .card-hover {
-    @apply card hover:bg-gray-50 dark:hover:bg-white/5 transition-all duration-200;
-    box-shadow: none !important;
+    @apply card cursor-pointer transition-all duration-300;
   }
   .card-hover:hover {
-    box-shadow: none !important;
-    transform: none !important;
+    border-color: rgba(99,102,241,0.25);
+    transform: translateY(-3px);
+    box-shadow: 0 12px 30px -4px rgba(0, 0, 0, 0.12);
   }
 
   /* ── Inputs ──────────────────────────────────────── */

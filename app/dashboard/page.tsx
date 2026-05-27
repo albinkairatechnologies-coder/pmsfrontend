@@ -654,6 +654,105 @@ export default function DashboardPage() {
           </div>
         </GlowCard>
       </div>
+
+      {/* New Same Department Employee Attendance Card */}
+      <GlowCard className="p-6">
+        <div className="flex justify-between items-center mb-6">
+          <div className="flex items-center gap-2">
+            <FiActivity className="text-[#6366F1]" size={16} />
+            <h2 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+              Department Attendance
+            </h2>
+          </div>
+          <span className="px-3 py-1 bg-emerald-500/10 text-emerald-500 text-[10px] font-black uppercase rounded-full tracking-widest">
+            Today's Status
+          </span>
+        </div>
+
+        {!stats?.dept_attendance?.length ? (
+          <p className="text-gray-400 text-sm text-center py-6">No department members found or registered.</p>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            {stats.dept_attendance.map((emp: any) => {
+              const checkedIn = !!emp.check_in_time;
+              const checkedOut = !!emp.check_out_time;
+              
+              // Formatting helper for IST times
+              const formatTime = (isoStr: string) => {
+                if (!isoStr) return '';
+                const d = new Date(isoStr);
+                return d.toLocaleTimeString('en-US', {
+                  hour: '2-digit',
+                  minute: '2-digit',
+                  hour12: true
+                });
+              };
+
+              return (
+                <div key={emp.user_id} className="p-4 bg-gray-50/50 dark:bg-white/[0.02] border border-gray-100 dark:border-white/5 rounded-2xl flex flex-col justify-between hover:bg-slate-100 dark:hover:bg-white/5 transition-all">
+                  <div>
+                    <div className="flex items-start justify-between gap-2 mb-2">
+                      <div>
+                        <h4 className="font-bold text-gray-900 dark:text-white text-sm">{emp.name}</h4>
+                        <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">{emp.role?.replace(/_/g, ' ')}</p>
+                      </div>
+                      
+                      {/* Pulsing Status Dot */}
+                      <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 mt-1 ${
+                        checkedIn && !checkedOut
+                          ? 'bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.5)]'
+                          : checkedOut
+                          ? 'bg-blue-500'
+                          : 'bg-gray-300 dark:bg-gray-700'
+                      }`} title={
+                        checkedIn && !checkedOut ? 'On Duty (Active)' : checkedOut ? 'Shift Completed' : 'Not Clocked In'
+                      } />
+                    </div>
+                  </div>
+
+                  <div className="mt-3 pt-3 border-t border-gray-100 dark:border-white/5 text-[11px] space-y-1.5 text-gray-600 dark:text-gray-400">
+                    <div className="flex justify-between">
+                      <span>Status:</span>
+                      <span className={`font-semibold uppercase text-[10px] px-1.5 py-0.5 rounded ${
+                        emp.status === 'present'
+                          ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20'
+                          : emp.status === 'late'
+                          ? 'bg-amber-500/10 text-amber-500 border border-amber-500/20'
+                          : emp.status === 'half_day'
+                          ? 'bg-purple-500/10 text-purple-500 border border-purple-500/20'
+                          : 'bg-slate-500/10 text-slate-400'
+                      }`}>
+                        {emp.status ? emp.status.replace(/_/g, ' ') : 'Absent'}
+                      </span>
+                    </div>
+
+                    {checkedIn && (
+                      <div className="flex justify-between">
+                        <span>Check-In:</span>
+                        <span className="font-bold text-gray-800 dark:text-gray-200">{formatTime(emp.check_in_time)}</span>
+                      </div>
+                    )}
+
+                    {checkedOut && (
+                      <div className="flex justify-between">
+                        <span>Check-Out:</span>
+                        <span className="font-bold text-gray-800 dark:text-gray-200">{formatTime(emp.check_out_time)}</span>
+                      </div>
+                    )}
+                    
+                    {emp.net_hours > 0 && (
+                      <div className="flex justify-between">
+                        <span>Hours worked:</span>
+                        <span className="font-bold text-[#6366F1]">{emp.net_hours} hrs</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </GlowCard>
     </div>
   );
 
