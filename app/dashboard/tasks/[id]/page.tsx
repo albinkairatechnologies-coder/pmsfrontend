@@ -126,6 +126,10 @@ export default function TaskDetailPage() {
   const [showVideoCall, setShowVideoCall] = useState(false);
   const [isVideoCaller, setIsVideoCaller] = useState(false);
 
+  // Chat Search Integration
+  const [chatSearchActive, setChatSearchActive] = useState(false);
+  const [chatSearchQuery, setChatSearchQuery] = useState('');
+
 
   // Pipeline State Variables
   const [pipelineStages, setPipelineStages] = useState<any[]>([]);
@@ -861,36 +865,69 @@ export default function TaskDetailPage() {
          <div className="absolute inset-0 opacity-[0.15] dark:opacity-[0.05]" style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg width='120' height='120' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M11 18c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7z' fill='%23ffffff' fill-opacity='0.5'/%3E%3Cpath d='M45 65c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm30-40c2.2 0 4-1.8 4-4s-1.8-4-4-4-4 1.8-4 4 1.8 4 4 4z' fill='%23ffffff' fill-opacity='0.5'/%3E%3Cpath d='M20 80l5-5 5 5-5 5zM80 80l5-5 5 5-5 5zM50 20l5-5 5 5-5 5z' fill='%23ffffff' fill-opacity='0.5'/%3E%3C/svg%3E")` }} />
 
           {/* Enhanced Header with Actions matching Reference Image */}
-          <div className="flex items-center justify-between px-6 py-3 bg-white/90 dark:bg-dark-card/90 backdrop-blur-xl border-b border-gray-200 dark:border-white/5 z-40 shadow-sm">
-             <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-blue-100 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400 rounded-full flex items-center justify-center"><FiMessageSquare size={18}/></div>
-                <div>
-                   <h2 className="text-[14px] font-bold text-gray-900 dark:text-gray-100 tracking-tight leading-none mb-0.5">
-                     {activePanel === 'chat' ? 'Task chat' : activePanel === 'logs' ? 'Activity Logs' : activePanel === 'subtasks' ? 'Subtasks' : activePanel === 'history' ? 'History' : 'Alerts'}
-                   </h2>
-                   <p className="text-[11px] font-medium text-gray-500 dark:text-gray-400 opacity-80">{(task.participants?.length || 0) + 1} members</p>
-                </div>
-             </div>
-             
-             <div className="flex items-center gap-3">
-                {activePanel === 'chat' && (
-                  <div className="flex items-center gap-2">
-                      <button 
-                        onClick={() => startVideoCall(true)}
-                        className="flex items-center gap-2 px-4 py-2 bg-[#8e44ad] hover:bg-[#732d91] text-white rounded-lg text-xs font-bold shadow-md transition-all"
-                      >
-                         <FiVideo size={14} /> <span>Video call</span>
+          {chatSearchActive ? (
+              <div className="flex items-center gap-3 px-6 py-3 bg-white/90 dark:bg-dark-card/90 backdrop-blur-xl border-b border-gray-200 dark:border-white/5 z-40 shadow-sm transition-all duration-300">
+                 <div className="flex items-center gap-2 w-full">
+                    <FiSearch size={18} className="text-gray-400" />
+                    <input
+                      type="text"
+                      placeholder="Search messages in this chat..."
+                      value={chatSearchQuery}
+                      onChange={e => setChatSearchQuery(e.target.value)}
+                      className="flex-1 bg-transparent border-none outline-none text-xs text-gray-900 dark:text-gray-100 placeholder-gray-500"
+                      autoFocus
+                    />
+                    {chatSearchQuery && (
+                      <button onClick={() => setChatSearchQuery('')} className="p-1.5 hover:bg-gray-100 dark:hover:bg-white/10 rounded-full text-gray-400 hover:text-gray-600 transition-all">
+                        <FiX size={14} />
                       </button>
-                     <div className="h-6 w-[1px] bg-gray-200 dark:bg-white/10 mx-1"></div>
-                     <button className="p-2 text-gray-400 hover:text-gray-700 dark:hover:text-white rounded-full transition-colors"><FiUsers size={16} /></button>
-                     <button className="p-2 text-gray-400 hover:text-gray-700 dark:hover:text-white rounded-full transition-colors"><FiSearch size={16} /></button>
-                  </div>
-                )}
-                {activePanel !== 'chat' && (
-                  <button onClick={() => setActivePanel('chat')} className="px-3 py-1.5 text-[11px] font-bold text-indigo-600 bg-indigo-50 dark:bg-indigo-500/10 rounded-lg hover:bg-indigo-100 transition-all">← Back to Chat</button>
-                )}
+                    )}
+                    <button 
+                      onClick={() => { setChatSearchActive(false); setChatSearchQuery(''); }} 
+                      className="px-3 py-1.5 text-[11px] font-bold text-gray-500 hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-all"
+                    >
+                      Cancel
+                    </button>
+                 </div>
+              </div>
+           ) : (
+              <div className="flex items-center justify-between px-6 py-3 bg-white/90 dark:bg-dark-card/90 backdrop-blur-xl border-b border-gray-200 dark:border-white/5 z-40 shadow-sm">
+                 <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-blue-100 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400 rounded-full flex items-center justify-center"><FiMessageSquare size={18}/></div>
+                    <div>
+                       <h2 className="text-[14px] font-bold text-gray-900 dark:text-gray-100 tracking-tight leading-none mb-0.5">
+                         {activePanel === 'chat' ? 'Task chat' : activePanel === 'logs' ? 'Activity Logs' : activePanel === 'subtasks' ? 'Subtasks' : activePanel === 'history' ? 'History' : 'Alerts'}
+                       </h2>
+                       <p className="text-[11px] font-medium text-gray-500 dark:text-gray-400 opacity-80">{(task.participants?.length || 0) + 1} members</p>
+                    </div>
+                 </div>
+                 
+                 <div className="flex items-center gap-3">
+                    {activePanel === 'chat' && (
+                      <div className="flex items-center gap-2">
+                          <button 
+                            onClick={() => startVideoCall(true)}
+                            className="flex items-center gap-2 px-4 py-2 bg-[#8e44ad] hover:bg-[#732d91] text-white rounded-lg text-xs font-bold shadow-md transition-all"
+                          >
+                             <FiVideo size={14} /> <span>Video call</span>
+                          </button>
+                         <div className="h-6 w-[1px] bg-gray-200 dark:bg-white/10 mx-1"></div>
+                         <button className="p-2 text-gray-400 hover:text-gray-700 dark:hover:text-white rounded-full transition-colors"><FiUsers size={16} /></button>
+                         <button 
+                           onClick={() => setChatSearchActive(true)}
+                           className="p-2 text-gray-400 hover:text-gray-700 dark:hover:text-white rounded-full transition-colors"
+                           title="Search Chat"
+                         >
+                           <FiSearch size={16} />
+                         </button>
+                      </div>
+                    )}
+                    {activePanel !== 'chat' && (
+                      <button onClick={() => setActivePanel('chat')} className="px-3 py-1.5 text-[11px] font-bold text-indigo-600 bg-indigo-50 dark:bg-indigo-500/10 rounded-lg hover:bg-indigo-100 transition-all">← Back to Chat</button>
+                    )}
+                 </div>
              </div>
-         </div>
+           )}
 
          {/* CHAT PANEL */}
          {activePanel === 'chat' && (
@@ -898,7 +935,22 @@ export default function TaskDetailPage() {
              <div className="flex-1 overflow-y-auto px-6 py-6 space-y-2 z-0 custom-scrollbar scroll-smooth pb-28">
                 {(() => {
                    let lastDate = '';
-                   const msgs = messages.filter(m => m.message_type !== 'subtask');
+                   let msgs = messages.filter(m => m.message_type !== 'subtask');
+                   
+                   if (chatSearchQuery.trim()) {
+                      const query = chatSearchQuery.toLowerCase();
+                      msgs = msgs.filter(m => m.content?.toLowerCase().includes(query) || m.user_name?.toLowerCase().includes(query));
+                   }
+
+                   if (msgs.length === 0) {
+                      return (
+                         <div className="flex flex-col items-center justify-center py-20 text-gray-400 dark:text-gray-500">
+                            <FiSearch size={32} className="mb-2 opacity-50 animate-pulse" />
+                            <p className="text-xs font-bold uppercase tracking-wider">No matching messages</p>
+                            <p className="text-[10px] opacity-75 mt-0.5">Try searching for something else</p>
+                         </div>
+                      );
+                   }
                    
                    return msgs.map((msg, i) => {
                       const dateObj = parseISTDate(msg.created_at);
