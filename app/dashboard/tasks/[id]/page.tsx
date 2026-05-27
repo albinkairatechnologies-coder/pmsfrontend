@@ -1059,7 +1059,11 @@ export default function TaskDetailPage() {
                                                 <span className="text-[8px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider">(edited)</span>
                                               )}
                                               <span>{dateObj.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true, timeZone: 'Asia/Kolkata' }).toLowerCase()}</span>
-                                              {isMe && <span>✓✓</span>}
+                                              {isMe && (
+                                                <span className={msg.is_read === 1 || msg.is_read === true ? "text-blue-100 font-bold" : "opacity-60 font-bold"}>
+                                                  {msg.is_read === 1 || msg.is_read === true ? '✓✓' : '✓'}
+                                                </span>
+                                              )}
                                            </div>
                                        </div>
 

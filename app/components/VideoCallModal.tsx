@@ -28,12 +28,15 @@ function authHeaders(): HeadersInit {
 }
 
 // ── Friendly error messages per browser DOMException name ────────────────────
-function getMediaErrorMessage(err: unknown): { title: string; detail: string; canRetry: boolean } {
-  const name = (err instanceof DOMException) ? err.name : '';
+function getMediaErrorMessage(err: any): { title: string; detail: string; canRetry: boolean } {
+  console.error("WebRTC media access failure details:", err);
+  const name = err?.name || (err instanceof DOMException ? err.name : '');
+  const message = err?.message || '';
+
   if (name === 'NotFoundError' || name === 'DevicesNotFoundError') {
     return {
       title: 'Camera / Microphone Not Found',
-      detail: 'No camera or microphone was detected on this device. Make sure your devices are plugged in and try again, or use audio-only mode.',
+      detail: `No camera or microphone was detected on this device. Make sure your devices are plugged in and try again, or use audio-only mode. (Details: ${name}${message ? ' - ' + message : ''})`,
       canRetry: true,
     };
   }
@@ -46,21 +49,21 @@ function getMediaErrorMessage(err: unknown): { title: string; detail: string; ca
   }
   if (name === 'NotReadableError' || name === 'TrackStartError') {
     return {
-      title: 'Device In Use',
-      detail: 'Your camera or microphone is already being used by another application. Close the other app and try again.',
+      title: 'Device In Use / Not Readable',
+      detail: `Your camera or microphone is already being used by another application or is not readable. Close the other app and try again. (Details: ${name}${message ? ' - ' + message : ''})`,
       canRetry: true,
     };
   }
   if (name === 'OverconstrainedError') {
     return {
       title: 'Device Not Compatible',
-      detail: 'Your camera/microphone does not meet the required constraints. Try using a different device.',
+      detail: `Your camera/microphone does not meet the required constraints. Try using a different device. (Constraint: ${err?.constraint || 'unknown'})`,
       canRetry: true,
     };
   }
   return {
     title: 'Cannot Access Media Devices',
-    detail: 'An unexpected error occurred while accessing your camera/microphone. Make sure you are on a secure (HTTPS) connection.',
+    detail: `An unexpected error occurred while accessing your camera/microphone. Make sure you are on a secure (HTTPS) connection. (Details: ${name || 'UnknownError'} - ${message || 'No details provided'})`,
     canRetry: true,
   };
 }
@@ -291,12 +294,14 @@ export default function VideoCallModal({ roomId, userName, isCaller, onClose }: 
       try {
         stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
       } catch (videoErr) {
+        console.warn("Video/Camera capture failed, attempting audio-only fallback...", videoErr);
         // Try audio-only fallback
         try {
           stream = await navigator.mediaDevices.getUserMedia({ video: false, audio: true });
           setAudioOnly(true);
           setCamOff(true);
         } catch (audioErr) {
+          console.error("Audio-only capture also failed:", audioErr);
           // Both failed — show friendly error card
           const info = getMediaErrorMessage(videoErr);
           setMediaError(info);
