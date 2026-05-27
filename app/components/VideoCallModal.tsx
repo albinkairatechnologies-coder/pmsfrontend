@@ -2,13 +2,13 @@
 
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { API_URL } from '../utils/api';
-import { FiMic, FiMicOff, FiVideo, FiVideoOff, FiPhoneOff, FiMaximize2, FiMinimize2, FiUsers } from 'react-icons/fi';
+import { FiMic, FiMicOff, FiVideo, FiVideoOff, FiPhoneOff, FiMaximize2, FiMinimize2, FiUsers, FiAlertCircle, FiRefreshCw } from 'react-icons/fi';
 
 interface VideoCallModalProps {
-  roomId: string;          // e.g. "KairaFlow_Task_7"
-  userName: string;        // display name of local user
-  isCaller: boolean;       // true = initiated call, false = joining
-  onClose: () => void;     // callback when call ends
+  roomId: string;
+  userName: string;
+  isCaller: boolean;
+  onClose: () => void;
 }
 
 const STUN_SERVERS: RTCIceServer[] = [
@@ -27,6 +27,44 @@ function authHeaders(): HeadersInit {
   };
 }
 
+// ── Friendly error messages per browser DOMException name ────────────────────
+function getMediaErrorMessage(err: unknown): { title: string; detail: string; canRetry: boolean } {
+  const name = (err instanceof DOMException) ? err.name : '';
+  if (name === 'NotFoundError' || name === 'DevicesNotFoundError') {
+    return {
+      title: 'Camera / Microphone Not Found',
+      detail: 'No camera or microphone was detected on this device. Make sure your devices are plugged in and try again, or use audio-only mode.',
+      canRetry: true,
+    };
+  }
+  if (name === 'NotAllowedError' || name === 'PermissionDeniedError') {
+    return {
+      title: 'Permission Denied',
+      detail: 'Browser blocked access to camera/microphone. Click the camera icon in your browser address bar and allow access, then try again.',
+      canRetry: true,
+    };
+  }
+  if (name === 'NotReadableError' || name === 'TrackStartError') {
+    return {
+      title: 'Device In Use',
+      detail: 'Your camera or microphone is already being used by another application. Close the other app and try again.',
+      canRetry: true,
+    };
+  }
+  if (name === 'OverconstrainedError') {
+    return {
+      title: 'Device Not Compatible',
+      detail: 'Your camera/microphone does not meet the required constraints. Try using a different device.',
+      canRetry: true,
+    };
+  }
+  return {
+    title: 'Cannot Access Media Devices',
+    detail: 'An unexpected error occurred while accessing your camera/microphone. Make sure you are on a secure (HTTPS) connection.',
+    canRetry: true,
+  };
+}
+
 export default function VideoCallModal({ roomId, userName, isCaller, onClose }: VideoCallModalProps) {
   const localVideoRef  = useRef<HTMLVideoElement>(null);
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
@@ -36,13 +74,15 @@ export default function VideoCallModal({ roomId, userName, isCaller, onClose }: 
   const iceSinceRef    = useRef(0);
   const hangingUpRef   = useRef(false);
   const connectedRef   = useRef(false);
+  const mountedRef     = useRef(true);
 
-  const [status,        setStatus]        = useState<'connecting' | 'calling' | 'ringing' | 'connected' | 'ended'>('connecting');
-  const [micMuted,      setMicMuted]      = useState(false);
-  const [camOff,        setCamOff]        = useState(false);
-  const [remoteStream,  setRemoteStream]  = useState(false);
-  const [isFullscreen,  setIsFullscreen]  = useState(false);
-  const [callDuration,  setCallDuration]  = useState(0);
+  const [status,       setStatus]       = useState<'connecting' | 'calling' | 'ringing' | 'connected' | 'ended'>('connecting');
+  const [micMuted,     setMicMuted]     = useState(false);
+  const [camOff,       setCamOff]       = useState(false);
+  const [audioOnly,    setAudioOnly]    = useState(false);  // true when no camera found but mic OK
+  const [remoteStream, setRemoteStream] = useState(false);
+  const [callDuration, setCallDuration] = useState(0);
+  const [mediaError,   setMediaError]   = useState<{ title: string; detail: string; canRetry: boolean } | null>(null);
   const durationTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // ── Cleanup ──────────────────────────────────────────────────────────────
@@ -77,7 +117,7 @@ export default function VideoCallModal({ roomId, userName, isCaller, onClose }: 
     setTimeout(() => onClose(), 600);
   }, [roomId, onClose]);
 
-  // ── Post ICE candidate to backend ────────────────────────────────────────
+  // ── Post ICE candidate ────────────────────────────────────────────────────
   const postIce = useCallback((candidate: RTCIceCandidate) => {
     fetch(`${API_URL}/videocall/rooms/${encodeURIComponent(roomId)}/ice`, {
       method: 'POST',
@@ -90,25 +130,20 @@ export default function VideoCallModal({ roomId, userName, isCaller, onClose }: 
   const applyRemoteIce = useCallback(async (candidates: RTCIceCandidateInit[]) => {
     if (!pcRef.current) return;
     for (const c of candidates) {
-      try {
-        await pcRef.current.addIceCandidate(new RTCIceCandidate(c));
-      } catch (_) {}
+      try { await pcRef.current.addIceCandidate(new RTCIceCandidate(c)); } catch (_) {}
     }
   }, []);
 
-  // ── Poll loop (both sides) ────────────────────────────────────────────────
+  // ── Poll loop ─────────────────────────────────────────────────────────────
   const startPolling = useCallback(() => {
     const role = isCaller ? 'caller' : 'callee';
 
     pollTimerRef.current = setInterval(async () => {
       if (!pcRef.current || hangingUpRef.current) return;
 
-      // Caller polls for answer
       if (isCaller && pcRef.current.remoteDescription === null) {
         try {
-          const res = await fetch(`${API_URL}/videocall/rooms/${encodeURIComponent(roomId)}/answer`, {
-            headers: authHeaders()
-          });
+          const res  = await fetch(`${API_URL}/videocall/rooms/${encodeURIComponent(roomId)}/answer`, { headers: authHeaders() });
           const data = await res.json();
           if (data.sdp && pcRef.current && !pcRef.current.remoteDescription) {
             await pcRef.current.setRemoteDescription(new RTCSessionDescription({ type: 'answer', sdp: data.sdp }));
@@ -116,13 +151,9 @@ export default function VideoCallModal({ roomId, userName, isCaller, onClose }: 
         } catch (_) {}
       }
 
-      // Poll remote ICE
       try {
         const since = iceSinceRef.current;
-        const res = await fetch(
-          `${API_URL}/videocall/rooms/${encodeURIComponent(roomId)}/ice?role=${role}&since=${since}`,
-          { headers: authHeaders() }
-        );
+        const res  = await fetch(`${API_URL}/videocall/rooms/${encodeURIComponent(roomId)}/ice?role=${role}&since=${since}`, { headers: authHeaders() });
         const data = await res.json();
         if (data.candidates?.length) {
           await applyRemoteIce(data.candidates);
@@ -130,27 +161,17 @@ export default function VideoCallModal({ roomId, userName, isCaller, onClose }: 
         }
       } catch (_) {}
 
-      // Stop polling when connected and answer exchanged
-      if (connectedRef.current && pcRef.current?.remoteDescription) {
-        // Keep polling ICE for a bit then slow down
-      }
-
-      // Check if remote ended call (room deleted)
       if (connectedRef.current) {
         try {
-          const res = await fetch(`${API_URL}/videocall/rooms/${encodeURIComponent(roomId)}/status`, {
-            headers: authHeaders(),
-          });
+          const res  = await fetch(`${API_URL}/videocall/rooms/${encodeURIComponent(roomId)}/status`, { headers: authHeaders() });
           const data = await res.json();
-          if (!data.exists) {
-            cleanup(false);
-          }
+          if (!data.exists) cleanup(false);
         } catch (_) {}
       }
     }, POLL_INTERVAL_MS);
   }, [isCaller, roomId, applyRemoteIce, cleanup]);
 
-  // ── Callee: poll for offer then answer ───────────────────────────────────
+  // ── Callee: wait for offer ────────────────────────────────────────────────
   const calleeWaitForOffer = useCallback(async () => {
     setStatus('ringing');
     const maxWait = 60000;
@@ -162,9 +183,7 @@ export default function VideoCallModal({ roomId, userName, isCaller, onClose }: 
         return;
       }
       try {
-        const res = await fetch(`${API_URL}/videocall/rooms/${encodeURIComponent(roomId)}/offer`, {
-          headers: authHeaders(),
-        });
+        const res  = await fetch(`${API_URL}/videocall/rooms/${encodeURIComponent(roomId)}/offer`, { headers: authHeaders() });
         const data = await res.json();
         if (data.sdp && pcRef.current) {
           await pcRef.current.setRemoteDescription(new RTCSessionDescription({ type: 'offer', sdp: data.sdp }));
@@ -205,65 +224,89 @@ export default function VideoCallModal({ roomId, userName, isCaller, onClose }: 
     }
   }, [roomId, cleanup, startPolling]);
 
-  // ── Init WebRTC ───────────────────────────────────────────────────────────
-  useEffect(() => {
-    let mounted = true;
+  // ── Setup RTCPeerConnection after getting stream ───────────────────────────
+  const setupPeerConnection = useCallback((stream: MediaStream) => {
+    const pc = new RTCPeerConnection({ iceServers: STUN_SERVERS });
+    pcRef.current = pc;
 
-    const init = async () => {
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-        if (!mounted) { stream.getTracks().forEach(t => t.stop()); return; }
-        localStreamRef.current = stream;
-        if (localVideoRef.current) {
-          localVideoRef.current.srcObject = stream;
-        }
+    stream.getTracks().forEach(track => pc.addTrack(track, stream));
 
-        const pc = new RTCPeerConnection({ iceServers: STUN_SERVERS });
-        pcRef.current = pc;
+    pc.onicecandidate = (ev) => {
+      if (ev.candidate) postIce(ev.candidate);
+    };
 
-        stream.getTracks().forEach(track => pc.addTrack(track, stream));
-
-        pc.onicecandidate = (ev) => {
-          if (ev.candidate) postIce(ev.candidate);
-        };
-
-        pc.ontrack = (ev) => {
-          if (remoteVideoRef.current && ev.streams[0]) {
-            remoteVideoRef.current.srcObject = ev.streams[0];
-            setRemoteStream(true);
-          }
-        };
-
-        pc.onconnectionstatechange = () => {
-          if (!pcRef.current) return;
-          const state = pcRef.current.connectionState;
-          if (state === 'connected') {
-            connectedRef.current = true;
-            setStatus('connected');
-            durationTimerRef.current = setInterval(() => setCallDuration(d => d + 1), 1000);
-          }
-          if (state === 'disconnected' || state === 'failed' || state === 'closed') {
-            if (!hangingUpRef.current) cleanup(false);
-          }
-        };
-
-        if (isCaller) {
-          await callerCreateOffer();
-        } else {
-          await calleeWaitForOffer();
-        }
-      } catch (err) {
-        console.error('Media access failed:', err);
-        if (mounted) {
-          setStatus('ended');
-          setTimeout(() => onClose(), 1000);
-        }
+    pc.ontrack = (ev) => {
+      if (remoteVideoRef.current && ev.streams[0]) {
+        remoteVideoRef.current.srcObject = ev.streams[0];
+        setRemoteStream(true);
       }
     };
 
-    init();
+    pc.onconnectionstatechange = () => {
+      if (!pcRef.current) return;
+      const state = pcRef.current.connectionState;
+      if (state === 'connected') {
+        connectedRef.current = true;
+        setStatus('connected');
+        durationTimerRef.current = setInterval(() => setCallDuration(d => d + 1), 1000);
+      }
+      if (state === 'disconnected' || state === 'failed' || state === 'closed') {
+        if (!hangingUpRef.current) cleanup(false);
+      }
+    };
+  }, [postIce, cleanup]);
+
+  // ── Init WebRTC with graceful fallbacks ───────────────────────────────────
+  const initCall = useCallback(async () => {
+    hangingUpRef.current = false;
+    iceSinceRef.current  = 0;
+    connectedRef.current = false;
+    setMediaError(null);
+    setStatus('connecting');
+    setAudioOnly(false);
+    setCamOff(false);
+    setMicMuted(false);
+
+    let stream: MediaStream | null = null;
+
+    // Try video+audio first
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+    } catch (videoErr) {
+      // Try audio-only fallback
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({ video: false, audio: true });
+        setAudioOnly(true);
+        setCamOff(true);
+      } catch (audioErr) {
+        // Both failed — show friendly error card
+        const info = getMediaErrorMessage(videoErr);
+        setMediaError(info);
+        return;
+      }
+    }
+
+    if (!mountedRef.current) { stream.getTracks().forEach(t => t.stop()); return; }
+    localStreamRef.current = stream;
+
+    if (localVideoRef.current && stream.getVideoTracks().length > 0) {
+      localVideoRef.current.srcObject = stream;
+    }
+
+    setupPeerConnection(stream);
+
+    if (isCaller) {
+      await callerCreateOffer();
+    } else {
+      await calleeWaitForOffer();
+    }
+  }, [isCaller, setupPeerConnection, callerCreateOffer, calleeWaitForOffer]);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    initCall();
     return () => {
-      mounted = false;
+      mountedRef.current = false;
       cleanup(isCaller);
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -280,6 +323,7 @@ export default function VideoCallModal({ roomId, userName, isCaller, onClose }: 
 
   // ── Toggle camera ─────────────────────────────────────────────────────────
   const toggleCam = () => {
+    if (audioOnly) return; // no camera available
     const videoTrack = localStreamRef.current?.getVideoTracks()[0];
     if (videoTrack) {
       videoTrack.enabled = !videoTrack.enabled;
@@ -295,12 +339,51 @@ export default function VideoCallModal({ roomId, userName, isCaller, onClose }: 
   };
 
   const statusLabel = {
-    connecting: 'Setting up camera...',
+    connecting: audioOnly ? 'Audio-only mode — no camera found' : 'Setting up camera...',
     calling:    'Calling... waiting for others to join',
     ringing:    'Waiting for host to start call...',
     connected:  `Connected · ${formatDuration(callDuration)}`,
     ended:      'Call ended',
   }[status];
+
+  // ── Media Error Screen ────────────────────────────────────────────────────
+  if (mediaError) {
+    return (
+      <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-[#0A0C14]/95 backdrop-blur-md p-6">
+        <div className="bg-[#11131E] border border-red-500/30 rounded-3xl p-8 max-w-md w-full shadow-2xl shadow-red-500/10 text-center">
+          <div className="w-16 h-16 rounded-full bg-red-500/20 border border-red-500/30 flex items-center justify-center mx-auto mb-5">
+            <FiAlertCircle size={32} className="text-red-400" />
+          </div>
+          <h2 className="text-white font-black text-lg mb-2">{mediaError.title}</h2>
+          <p className="text-white/50 text-sm leading-relaxed mb-6">{mediaError.detail}</p>
+
+          <div className="flex flex-col gap-3">
+            {mediaError.canRetry && (
+              <button
+                onClick={() => {
+                  hangingUpRef.current = false;
+                  initCall();
+                }}
+                className="flex items-center justify-center gap-2 w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold text-sm transition-all active:scale-95"
+              >
+                <FiRefreshCw size={16} /> Try Again
+              </button>
+            )}
+            <button
+              onClick={onClose}
+              className="w-full py-3 bg-white/5 hover:bg-white/10 text-white/70 rounded-xl font-bold text-sm transition-all border border-white/10"
+            >
+              Close
+            </button>
+          </div>
+
+          <p className="text-white/30 text-xs mt-4">
+            💡 Tip: Click the camera icon in your browser's address bar to grant permissions
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div
@@ -313,12 +396,19 @@ export default function VideoCallModal({ roomId, userName, isCaller, onClose }: 
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2">
             <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
-            <span className="text-white font-bold text-sm tracking-tight">🎥 LIVE MEETING</span>
+            <span className="text-white font-bold text-sm tracking-tight">
+              {audioOnly ? '🎙️ AUDIO CALL' : '🎥 LIVE MEETING'}
+            </span>
           </div>
           <div className="hidden sm:block h-4 w-px bg-white/20" />
           <span className="hidden sm:block text-white/50 text-xs font-medium truncate max-w-[200px]">{roomId.replace(/_/g, ' ')}</span>
         </div>
         <div className="flex items-center gap-2">
+          {audioOnly && (
+            <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-yellow-500/20 text-yellow-400 border border-yellow-500/30">
+              Audio Only
+            </span>
+          )}
           <span className={`text-xs font-bold px-3 py-1 rounded-full ${
             status === 'connected'
               ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
@@ -355,6 +445,11 @@ export default function VideoCallModal({ roomId, userName, isCaller, onClose }: 
               {(status === 'calling' || status === 'ringing') && (
                 <p className="text-white/40 text-sm mt-1">Share the task link so others can join</p>
               )}
+              {audioOnly && status !== 'connected' && (
+                <p className="text-yellow-400/70 text-xs mt-2 font-medium">
+                  🎙️ Running in audio-only mode (no camera detected)
+                </p>
+              )}
             </div>
             {(status === 'calling' || status === 'ringing' || status === 'connecting') && (
               <div className="flex gap-1.5 mt-2">
@@ -370,26 +465,40 @@ export default function VideoCallModal({ roomId, userName, isCaller, onClose }: 
           </div>
         )}
 
-        {/* Local video (PiP, bottom right) */}
-        <div className={`absolute bottom-4 right-4 w-32 sm:w-40 aspect-video rounded-2xl overflow-hidden border-2 border-white/20 shadow-2xl bg-gray-900 transition-all duration-300 ${camOff ? 'opacity-50' : 'opacity-100'}`}>
-          <video
-            ref={localVideoRef}
-            autoPlay
-            playsInline
-            muted
-            className="w-full h-full object-cover scale-x-[-1]"
-          />
-          {camOff && (
-            <div className="absolute inset-0 flex items-center justify-center bg-gray-900/80">
-              <FiVideoOff className="text-white/60" size={20} />
+        {/* Local video PiP (hidden in audio-only mode) */}
+        {!audioOnly && (
+          <div className={`absolute bottom-4 right-4 w-32 sm:w-40 aspect-video rounded-2xl overflow-hidden border-2 border-white/20 shadow-2xl bg-gray-900 transition-all duration-300 ${camOff ? 'opacity-50' : 'opacity-100'}`}>
+            <video
+              ref={localVideoRef}
+              autoPlay
+              playsInline
+              muted
+              className="w-full h-full object-cover scale-x-[-1]"
+            />
+            {camOff && (
+              <div className="absolute inset-0 flex items-center justify-center bg-gray-900/80">
+                <FiVideoOff className="text-white/60" size={20} />
+              </div>
+            )}
+            <div className="absolute bottom-1 left-1 right-1 text-center">
+              <span className="text-white text-[9px] font-bold bg-black/60 px-1.5 py-0.5 rounded-full truncate max-w-full block">
+                {userName} (you)
+              </span>
             </div>
-          )}
-          <div className="absolute bottom-1 left-1 right-1 text-center">
-            <span className="text-white text-[9px] font-bold bg-black/60 px-1.5 py-0.5 rounded-full truncate max-w-full block">
-              {userName} (you)
-            </span>
           </div>
-        </div>
+        )}
+
+        {/* Audio-only avatar (when no camera) */}
+        {audioOnly && status !== 'ended' && (
+          <div className="absolute bottom-4 right-4 w-20 h-20 rounded-full bg-gradient-to-br from-purple-600 to-indigo-700 border-2 border-white/20 shadow-2xl flex flex-col items-center justify-center">
+            <span className="text-white font-black text-lg">{userName[0]?.toUpperCase()}</span>
+            <div className="flex gap-0.5 mt-1">
+              {[0, 1, 2].map(i => (
+                <div key={i} className="w-1 bg-emerald-400 rounded-full animate-pulse" style={{ height: `${8 + i * 4}px`, animationDelay: `${i * 0.1}s` }} />
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* ── Bottom controls ─────────────────────────────────────────────── */}
@@ -407,17 +516,20 @@ export default function VideoCallModal({ roomId, userName, isCaller, onClose }: 
           {micMuted ? <FiMicOff size={20} /> : <FiMic size={20} />}
         </button>
 
-        {/* Camera toggle */}
+        {/* Camera toggle (disabled in audio-only) */}
         <button
           onClick={toggleCam}
+          disabled={audioOnly}
           className={`w-12 h-12 rounded-full flex items-center justify-center transition-all active:scale-90 shadow-lg ${
-            camOff
-              ? 'bg-red-500/90 text-white shadow-red-500/30 hover:bg-red-600'
-              : 'bg-white/10 text-white hover:bg-white/20 border border-white/10'
+            audioOnly
+              ? 'bg-gray-800 text-gray-600 cursor-not-allowed border border-gray-700'
+              : camOff
+                ? 'bg-red-500/90 text-white shadow-red-500/30 hover:bg-red-600'
+                : 'bg-white/10 text-white hover:bg-white/20 border border-white/10'
           }`}
-          title={camOff ? 'Turn on camera' : 'Turn off camera'}
+          title={audioOnly ? 'No camera available' : camOff ? 'Turn on camera' : 'Turn off camera'}
         >
-          {camOff ? <FiVideoOff size={20} /> : <FiVideo size={20} />}
+          {camOff || audioOnly ? <FiVideoOff size={20} /> : <FiVideo size={20} />}
         </button>
 
         {/* End call */}
@@ -431,11 +543,17 @@ export default function VideoCallModal({ roomId, userName, isCaller, onClose }: 
 
         {/* Fullscreen toggle */}
         <button
-          onClick={() => setIsFullscreen(f => !f)}
+          onClick={() => {
+            if (!document.fullscreenElement) {
+              document.documentElement.requestFullscreen().catch(() => {});
+            } else {
+              document.exitFullscreen().catch(() => {});
+            }
+          }}
           className="w-12 h-12 rounded-full bg-white/10 text-white hover:bg-white/20 border border-white/10 flex items-center justify-center transition-all active:scale-90"
-          title={isFullscreen ? 'Exit fullscreen' : 'Fullscreen'}
+          title="Toggle fullscreen"
         >
-          {isFullscreen ? <FiMinimize2 size={18} /> : <FiMaximize2 size={18} />}
+          <FiMaximize2 size={18} />
         </button>
       </div>
     </div>

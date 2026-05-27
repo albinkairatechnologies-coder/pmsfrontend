@@ -953,7 +953,8 @@ export default function TrackPage() {
                     
                     return msgs.map((msg, i) => {
                       const dateObj = parseISTDate(msg.created_at);
-                      const formattedDate = dateObj.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+                      const formattedDate = dateObj.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', timeZone: 'Asia/Kolkata' });
+
                       let showDateSeparator = false;
                       
                       if (formattedDate !== lastDate) {
