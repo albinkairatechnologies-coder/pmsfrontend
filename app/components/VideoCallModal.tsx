@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { API_URL } from '../utils/api';
-import { FiMic, FiMicOff, FiVideo, FiVideoOff, FiPhoneOff, FiMaximize2, FiMinimize2, FiUsers, FiAlertCircle, FiRefreshCw } from 'react-icons/fi';
+import { FiMic, FiMicOff, FiVideo, FiVideoOff, FiPhoneOff, FiMaximize2, FiMinimize2, FiUsers, FiAlertCircle, FiRefreshCw, FiTv } from 'react-icons/fi';
 
 interface VideoCallModalProps {
   roomId: string;
@@ -88,6 +88,8 @@ export default function VideoCallModal({ roomId, userName, isCaller, onClose }: 
   const [callDuration, setCallDuration] = useState(0);
   const [mediaError,   setMediaError]   = useState<{ title: string; detail: string; canRetry: boolean } | null>(null);
   const durationTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const screenStreamRef = useRef<MediaStream | null>(null);
+  const [isScreenSharing, setIsScreenSharing] = useState(false);
 
   // ── Cleanup ──────────────────────────────────────────────────────────────
   const cleanup = useCallback(async (deleteRoom = true) => {
@@ -99,6 +101,8 @@ export default function VideoCallModal({ roomId, userName, isCaller, onClose }: 
 
     localStreamRef.current?.getTracks().forEach(t => t.stop());
     localStreamRef.current = null;
+    screenStreamRef.current?.getTracks().forEach(t => t.stop());
+    screenStreamRef.current = null;
 
     if (pcRef.current) {
       pcRef.current.ontrack = null;
@@ -356,6 +360,59 @@ export default function VideoCallModal({ roomId, userName, isCaller, onClose }: 
     }
   };
 
+  // ── Toggle Screen Share ───────────────────────────────────────────────────
+  const toggleScreenShare = async () => {
+    if (isViewer) return;
+
+    if (isScreenSharing) {
+      // Stop screen sharing, revert to camera
+      if (screenStreamRef.current) {
+        screenStreamRef.current.getTracks().forEach(t => t.stop());
+        screenStreamRef.current = null;
+      }
+
+      const cameraTrack = localStreamRef.current?.getVideoTracks()[0];
+      if (pcRef.current && cameraTrack) {
+        const sender = pcRef.current.getSenders().find(s => s.track?.kind === 'video');
+        if (sender) {
+          await sender.replaceTrack(cameraTrack);
+        }
+      }
+
+      if (localVideoRef.current && localStreamRef.current) {
+        localVideoRef.current.srcObject = localStreamRef.current;
+      }
+
+      setIsScreenSharing(false);
+    } else {
+      // Start screen sharing
+      try {
+        const screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
+        screenStreamRef.current = screenStream;
+        const screenTrack = screenStream.getVideoTracks()[0];
+
+        if (pcRef.current && screenTrack) {
+          const sender = pcRef.current.getSenders().find(s => s.track?.kind === 'video');
+          if (sender) {
+            await sender.replaceTrack(screenTrack);
+          }
+        }
+
+        if (localVideoRef.current) {
+          localVideoRef.current.srcObject = screenStream;
+        }
+
+        screenTrack.onended = () => {
+          toggleScreenShare(); // Revert back when user clicks native stop sharing button
+        };
+
+        setIsScreenSharing(true);
+      } catch (err) {
+        console.error("Screen sharing failed:", err);
+      }
+    }
+  };
+
   // ── Format duration ───────────────────────────────────────────────────────
   const formatDuration = (secs: number) => {
     const m = Math.floor(secs / 60).toString().padStart(2, '0');
@@ -578,6 +635,22 @@ export default function VideoCallModal({ roomId, userName, isCaller, onClose }: 
           title={isViewer ? 'No camera in viewer mode' : audioOnly ? 'No camera available' : camOff ? 'Turn on camera' : 'Turn off camera'}
         >
           {camOff || audioOnly || isViewer ? <FiVideoOff size={20} /> : <FiVideo size={20} />}
+        </button>
+
+        {/* Screen Share toggle (disabled in audio-only or viewer mode) */}
+        <button
+          onClick={toggleScreenShare}
+          disabled={isViewer}
+          className={`w-12 h-12 rounded-full flex items-center justify-center transition-all active:scale-90 shadow-lg ${
+            isViewer
+              ? 'bg-gray-800 text-gray-600 cursor-not-allowed border border-gray-700'
+              : isScreenSharing
+                ? 'bg-emerald-500/90 text-white shadow-emerald-500/30 hover:bg-emerald-600'
+                : 'bg-white/10 text-white hover:bg-white/20 border border-white/10'
+          }`}
+          title={isViewer ? 'No screen sharing in viewer mode' : isScreenSharing ? 'Stop screen sharing' : 'Share screen'}
+        >
+          <FiTv size={20} className={isScreenSharing ? "animate-pulse" : ""} />
         </button>
 
         {/* End call */}
