@@ -285,14 +285,14 @@ export default function InvoicesPage() {
       // Secondary Network Fallback if DOM extraction is blocked by Security Policies
       if (!topData) {
         try {
-          topData = await getBase64FromUrl(topImgEl?.src || '/letterpadtop.png');
+          topData = await getBase64FromUrl(topImgEl?.src || '/pms/letterpadtop.png');
         } catch (e) {
           console.error("Letterhead top network fallback failed:", e);
         }
       }
       if (!bottomData) {
         try {
-          bottomData = await getBase64FromUrl(botImgEl?.src || '/letterpadbottom.png');
+          bottomData = await getBase64FromUrl(botImgEl?.src || '/pms/letterpadbottom.png');
         } catch (e) {
           console.error("Letterhead bottom network fallback failed:", e);
         }
@@ -862,7 +862,7 @@ export default function InvoicesPage() {
               <div id="printable-invoice-surface" className="bg-white print-area relative w-full min-h-[297mm] flex flex-col justify-between">
 
                 {/* Top Letterhead Image */}
-                <img src="/letterpadtop.png" alt="Header" data-html2canvas-ignore="true" className="w-full h-auto object-cover z-10 block letterhead-top-fixed" />
+                <img src="/pms/letterpadtop.png" alt="Header" data-html2canvas-ignore="true" className="w-full h-auto object-cover z-10 block letterhead-top-fixed" />
 
                 <div className="px-12 pt-2 pb-12 relative z-20 flex-1 print-area-content">
                   {/* Header Section */}
@@ -1003,7 +1003,7 @@ export default function InvoicesPage() {
 
                 {/* Bottom Letterhead Image */}
                 <div className="w-full mt-auto block letterhead-bottom-fixed" data-html2canvas-ignore="true">
-                  <img src="/letterpadbottom.png" alt="Footer" className="w-full h-auto object-cover block" />
+                  <img src="/pms/letterpadbottom.png" alt="Footer" className="w-full h-auto object-cover block" />
                 </div>
               </div>
             </div>
