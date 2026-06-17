@@ -24,13 +24,15 @@ export default function ProfilePage() {
     if (typeof window !== 'undefined') {
       const hostname = window.location.hostname;
       const isLocal = hostname === 'localhost' || hostname === '127.0.0.1' || hostname.startsWith('192.168.') || hostname.startsWith('10.') || hostname.endsWith('.local');
+      const token = localStorage.getItem('token') || '';
+      const tokenParam = token ? `?token=${encodeURIComponent(token)}` : '';
       if (isLocal) {
-        setApkUrl('http://localhost:5000/api/public/apps/kairaflow.apk');
+        setApkUrl(`http://localhost:5000/api/public/apps/kairaflow.apk${tokenParam}`);
       } else {
-        setApkUrl(`${window.location.origin}/pms/api/public/apps/kairaflow.apk`);
+        setApkUrl(`${window.location.origin}/pms/api/public/apps/kairaflow.apk${tokenParam}`);
       }
     }
-  }, []);
+  }, [user]);
 
   const [profileForm, setProfileForm] = useState({
     name: '', phone: '', bio: '', dob: '', address: '',
